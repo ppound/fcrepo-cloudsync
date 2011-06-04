@@ -54,7 +54,7 @@
   </developers>
 
   <properties>
-    <fcrepo-misc.version>0.1.1-SNAPSHOT</fcrepo-misc.version>
+    <fcrepo-misc.version>0.1.1</fcrepo-misc.version>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
