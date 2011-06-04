@@ -8,6 +8,16 @@ public class Configuration {
     private Integer keepSysLogDays;
     private Integer keepTaskLogDays;
 
+    public String getCloudSyncVersion() {
+        return cloudSyncVersion;
+    }
+
+    public void setCloudSyncVersion(String cloudSyncVersion) {
+        this.cloudSyncVersion = cloudSyncVersion;
+    }
+
+    private String cloudSyncVersion;
+
     public Integer getKeepSysLogDays() {
         return keepSysLogDays;
     }

@@ -30,7 +30,7 @@ public class CloudSyncContextListener implements ServletContextListener {
 
             // Read cloudsync.properties, adding all to System properties
             Properties props = new Properties();
-            props.load(context.getResourceAsStream("WEB-INF/cloudsync.properties"));
+            props.load(getClass().getClassLoader().getResourceAsStream("cloudsync.properties"));
             for (String name: props.stringPropertyNames()) {
                 System.setProperty(name, props.getProperty(name));
             }

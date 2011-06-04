@@ -3,17 +3,8 @@
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
 
-  <!--
-    Allows use of ${refs-like-this}, sourced from properties files or
-    System properties.
-  -->
-  <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
-    <property name="locations">
-      <list>
-        <value>WEB-INF/cloudsync.properties</value>
-      </list>
-    </property>
-  </bean>
+  <!-- Allows use of ${refs-like-this} sourced from System properties. -->
+  <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer"/>
 
   <import resource="security.xml"/>
   <import resource="rest-api.xml"/>
