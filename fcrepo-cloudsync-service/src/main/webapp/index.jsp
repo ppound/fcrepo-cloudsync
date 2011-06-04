@@ -21,7 +21,7 @@
 
 <body>
 <div id="title">
-  <img src="static/logo.png" alt="Fedora CloudSync"/>
+  <img src="static/logo.png" onClick="showAbout();" alt="Fedora CloudSync"/>
 </div>
 
 <div id="logout">
@@ -395,6 +395,16 @@
 
 <div class="ui-helper-hidden" id="dialog-confirm" title="Are you sure?">
   ...
+</div>
+
+<div class="ui-helper-hidden" id="dialog-about" title="About CloudSync">
+  <p>
+    <strong>Version:</strong> <span id="version">..</span><br/>
+    <strong>Build Date:</strong> <span id="builddate">..</span>
+  </p>
+  <p>
+    <a href="https://wiki.duraspace.org/display/FEDORACREATE/Fedora+CloudSync" target="cloudsync-website">More Information</a>
+  </p>
 </div>
 
 </body>

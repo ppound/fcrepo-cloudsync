@@ -7,6 +7,8 @@ public class Configuration {
 
     private Integer keepSysLogDays;
     private Integer keepTaskLogDays;
+    private String cloudSyncVersion;
+    private String cloudSyncBuildDate;
 
     public String getCloudSyncVersion() {
         return cloudSyncVersion;
@@ -16,7 +18,13 @@ public class Configuration {
         this.cloudSyncVersion = cloudSyncVersion;
     }
 
-    private String cloudSyncVersion;
+    public String getCloudSyncBuildDate() {
+        return cloudSyncBuildDate;
+    }
+
+    public void setCloudSyncBuildDate(String cloudSyncBuildDate) {
+        this.cloudSyncBuildDate = cloudSyncBuildDate;
+    }
 
     public Integer getKeepSysLogDays() {
         return keepSysLogDays;

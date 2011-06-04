@@ -412,6 +412,13 @@ $(function() {
 
   $("#dialog-confirm").dialog({
     autoOpen: false,
+    modal: true,
+    width: 'auto',
+    show: 'fade',
+    hide: 'fade'
+  });
+
+  $("#dialog-about").dialog({
     autoOpen: false,
     modal: true,
     width: 'auto',
@@ -885,6 +892,19 @@ function showNewCopyTaskName() {
       + " from " + $("#NewCopyTask-sourceStoreId option:selected").text()
       + " to " + $("#NewCopyTask-destStoreId option:selected").text();
   $("#NewCopyTask-name").val(name);
+}
+
+function showAbout() {
+  service.getConfiguration(function(data) {
+    $("#dialog-about").dialog("option", "buttons", {
+      "Ok": function() {
+        $(this).dialog("close");
+      }
+    });
+    $("#version").text(data.configuration.cloudSyncVersion);
+    $("#builddate").text(data.configuration.cloudSyncBuildDate);
+    $("#dialog-about").dialog("open");
+  });
 }
 
 function showSpacesForProvider(id) {

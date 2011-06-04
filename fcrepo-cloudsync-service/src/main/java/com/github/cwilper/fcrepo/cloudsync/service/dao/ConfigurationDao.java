@@ -30,6 +30,7 @@ public class ConfigurationDao extends AbstractDao {
                         c.setKeepSysLogDays(rs.getInt("keepSysLogDays"));
                         c.setKeepTaskLogDays(rs.getInt("keepTaskLogDays"));
                         c.setCloudSyncVersion(System.getProperty("cloudsync.version"));
+                        c.setCloudSyncBuildDate(System.getProperty("cloudsync.builddate"));
                         return c;
                     }
                 });

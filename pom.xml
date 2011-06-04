@@ -74,6 +74,7 @@
     <artifactId>${project.artifactId}</artifactId>
     <currentVersion>${project.version}</currentVersion>
 
+    <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss 'UTC'Z</maven.build.timestamp.format>                            <timestamp>${maven.build.timestamp}</timestamp>
   </properties>
 
   <dependencyManagement>
