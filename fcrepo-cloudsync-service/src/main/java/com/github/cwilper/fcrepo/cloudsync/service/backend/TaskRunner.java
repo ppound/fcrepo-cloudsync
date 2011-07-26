@@ -5,6 +5,7 @@ import com.github.cwilper.fcrepo.cloudsync.service.dao.ObjectSetDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.ObjectStoreDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.TaskDao;
 import com.github.cwilper.fcrepo.dto.core.io.DateUtil;
+import com.github.cwilper.fcrepo.httpclient.HttpClientConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,12 +54,13 @@ public abstract class TaskRunner extends Thread {
                                                ObjectSetDao objectSetDao,
                                                ObjectStoreDao objectStoreDao,
                                                PrintWriter logWriter,
-                                               TaskCompletionListener completionListener) {
+                                               TaskCompletionListener completionListener,
+                                               HttpClientConfig httpClientConfig) {
         if (task.getType() != null && task.getType().length() > 0) {
             if (task.getType().equals("list")) {
-                return new ListTaskRunner(task, taskDao, objectSetDao, objectStoreDao, logWriter, completionListener);
+                return new ListTaskRunner(task, taskDao, objectSetDao, objectStoreDao, logWriter, completionListener, httpClientConfig);
             } else if (task.getType().equals("copy")) {
-                return new CopyTaskRunner(task, taskDao, objectSetDao, objectStoreDao, logWriter, completionListener);
+                return new CopyTaskRunner(task, taskDao, objectSetDao, objectStoreDao, logWriter, completionListener, httpClientConfig);
             } else {
                 throw new IllegalArgumentException("Unrecognized Task type: " + task.getType());
             }

@@ -3,6 +3,7 @@ package com.github.cwilper.fcrepo.cloudsync.service.dao;
 import com.github.cwilper.fcrepo.cloudsync.api.Task;
 import com.github.cwilper.fcrepo.cloudsync.service.backend.TaskRunner;
 import com.github.cwilper.fcrepo.cloudsync.service.util.StringUtil;
+import com.github.cwilper.fcrepo.httpclient.HttpClientConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DuplicateKeyException;
@@ -110,7 +111,7 @@ public class TaskDao extends AbstractDao {
         // Validate schedule content, type-specific data,
         // and do dependency determination
         final TaskRunner runner = TaskRunner.getInstance(task, this,
-                objectSetDao, objectStoreDao, null, null);
+                objectSetDao, objectStoreDao, null, null, new HttpClientConfig());
 
         // persist task and deps, validating that the deps (foreign keys) exist
         String id = tt.execute(new TransactionCallback<String>() {
@@ -256,7 +257,7 @@ public class TaskDao extends AbstractDao {
         // Validate schedule content, type-specific data,
         // and do dependency determination
         final TaskRunner runner = TaskRunner.getInstance(orig, this,
-                objectSetDao, objectStoreDao, null, null);
+                objectSetDao, objectStoreDao, null, null, new HttpClientConfig());
 
         // Finally, update the necessary tables in a transaction
         final int taskId = Integer.parseInt(orig.getId());

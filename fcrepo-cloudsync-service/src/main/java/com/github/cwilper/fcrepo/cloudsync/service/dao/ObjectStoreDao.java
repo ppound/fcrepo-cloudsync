@@ -4,6 +4,7 @@ import com.github.cwilper.fcrepo.cloudsync.api.ObjectInfo;
 import com.github.cwilper.fcrepo.cloudsync.api.ObjectStore;
 import com.github.cwilper.fcrepo.cloudsync.service.backend.StoreConnector;
 import com.github.cwilper.fcrepo.cloudsync.service.util.StringUtil;
+import com.github.cwilper.fcrepo.httpclient.HttpClientConfig;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
@@ -45,7 +46,7 @@ public class ObjectStoreDao extends AbstractDao {
         objectStore.setName(StringUtil.validate("name", objectStore.getName(), 256));
         objectStore.setType(StringUtil.validate("type", objectStore.getType(), 32));
         objectStore.setData(StringUtil.validate("data", objectStore.getData(), 1024));
-        StoreConnector.getInstance(objectStore); // do type-specific validation
+        StoreConnector.getInstance(objectStore, new HttpClientConfig()); // do type-specific validation
         String id = insert(
                 "INSERT INTO ObjectStores (name, type, data) VALUES (?, ?, ?)",
                 objectStore.getName(),

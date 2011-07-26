@@ -5,6 +5,7 @@ import com.github.cwilper.fcrepo.cloudsync.api.ObjectStore;
 import com.github.cwilper.fcrepo.dto.core.Datastream;
 import com.github.cwilper.fcrepo.dto.core.DatastreamVersion;
 import com.github.cwilper.fcrepo.dto.core.FedoraObject;
+import com.github.cwilper.fcrepo.httpclient.HttpClientConfig;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -27,11 +28,11 @@ public abstract class StoreConnector {
 
     private static final Logger logger = LoggerFactory.getLogger(StoreConnector.class);
 
-    public static final StoreConnector getInstance(ObjectStore store) {
+    public static final StoreConnector getInstance(ObjectStore store, HttpClientConfig httpClientConfig) {
         if (store.getType().equals("fedora")) {
-            return new FedoraConnector(store);
+            return new FedoraConnector(store, httpClientConfig);
         } else if (store.getType().equals("duracloud")) {
-            return new DuraCloudConnector(store);
+            return new DuraCloudConnector(store, httpClientConfig);
         } else {
             throw new IllegalArgumentException("Unrecognized ObjectStore type: " + store.getType());
         }

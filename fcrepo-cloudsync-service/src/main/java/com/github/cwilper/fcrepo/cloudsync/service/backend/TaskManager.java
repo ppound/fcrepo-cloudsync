@@ -7,6 +7,7 @@ import com.github.cwilper.fcrepo.cloudsync.service.dao.ObjectStoreDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.TaskDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.TaskLogDao;
 import com.github.cwilper.fcrepo.dto.core.io.DateUtil;
+import com.github.cwilper.fcrepo.httpclient.HttpClientConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +61,7 @@ public class TaskManager extends Thread implements TaskCompletionListener {
     private final TaskLogDao taskLogDao;
     private final ObjectSetDao objectSetDao;
     private final ObjectStoreDao objectStoreDao;
+    private final HttpClientConfig httpClientConfig;
 
     private final Map<String, TaskRunner> runners;
 
@@ -68,11 +70,13 @@ public class TaskManager extends Thread implements TaskCompletionListener {
     public TaskManager(TaskDao taskDao,
                        TaskLogDao taskLogDao,
                        ObjectSetDao objectSetDao,
-                       ObjectStoreDao objectStoreDao) {
+                       ObjectStoreDao objectStoreDao,
+                       HttpClientConfig httpClientConfig) {
         this.taskDao = taskDao;
         this.taskLogDao = taskLogDao;
         this.objectSetDao = objectSetDao;
         this.objectStoreDao = objectStoreDao;
+        this.httpClientConfig = httpClientConfig;
         this.runners = new HashMap<String, TaskRunner>();
     }
 
@@ -148,7 +152,7 @@ public class TaskManager extends Thread implements TaskCompletionListener {
         Date startDate = taskLogDao.getTaskLog(taskLogId).getStartDate();
         logWriter.println("# Started at " + DateUtil.toString(startDate));
 
-        TaskRunner runner = TaskRunner.getInstance(task, taskDao, objectSetDao, objectStoreDao, logWriter, this);
+        TaskRunner runner = TaskRunner.getInstance(task, taskDao, objectSetDao, objectStoreDao, logWriter, this, httpClientConfig);
         synchronized (runners) {
             runners.put(task.getId(), runner);
         }

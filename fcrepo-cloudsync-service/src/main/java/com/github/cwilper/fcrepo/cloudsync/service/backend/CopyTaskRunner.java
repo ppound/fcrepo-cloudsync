@@ -10,6 +10,7 @@ import com.github.cwilper.fcrepo.cloudsync.service.util.StringUtil;
 import com.github.cwilper.fcrepo.dto.core.ControlGroup;
 import com.github.cwilper.fcrepo.dto.core.Datastream;
 import com.github.cwilper.fcrepo.dto.core.FedoraObject;
+import com.github.cwilper.fcrepo.httpclient.HttpClientConfig;
 
 import java.io.PrintWriter;
 import java.util.HashSet;
@@ -27,6 +28,8 @@ public class CopyTaskRunner extends TaskRunner implements ObjectListHandler {
     private final Set<Integer> relatedSetIds = new HashSet<Integer>();
     private final Set<Integer> relatedStoreIds = new HashSet<Integer>();
 
+    private final HttpClientConfig httpClientConfig;
+
     private StoreConnector queryConnector;
     private StoreConnector sourceConnector;
     private StoreConnector destConnector;
@@ -38,7 +41,8 @@ public class CopyTaskRunner extends TaskRunner implements ObjectListHandler {
                           ObjectSetDao objectSetDao,
                           ObjectStoreDao objectStoreDao,
                           PrintWriter logWriter,
-                          TaskCompletionListener completionListener) {
+                          TaskCompletionListener completionListener,
+                          HttpClientConfig httpClientConfig) {
         super(task, taskDao, objectSetDao, objectStoreDao, logWriter, completionListener);
         Map<String, String> map = JSON.getMap(JSON.parse(task.getData()));
         setId = Integer.parseInt(map.get("setId"));
@@ -50,13 +54,14 @@ public class CopyTaskRunner extends TaskRunner implements ObjectListHandler {
         relatedStoreIds.add(queryStoreId);
         relatedStoreIds.add(sourceStoreId);
         relatedStoreIds.add(destStoreId);
+        this.httpClientConfig = httpClientConfig;
     }
 
     @Override
     public void runTask() throws Exception {
-        queryConnector = StoreConnector.getInstance(objectStoreDao.getObjectStore("" + queryStoreId));
-        sourceConnector = StoreConnector.getInstance(objectStoreDao.getObjectStore("" + sourceStoreId));
-        destConnector = StoreConnector.getInstance(objectStoreDao.getObjectStore("" + destStoreId));
+        queryConnector = StoreConnector.getInstance(objectStoreDao.getObjectStore("" + queryStoreId), httpClientConfig);
+        sourceConnector = StoreConnector.getInstance(objectStoreDao.getObjectStore("" + sourceStoreId), httpClientConfig);
+        destConnector = StoreConnector.getInstance(objectStoreDao.getObjectStore("" + destStoreId), httpClientConfig);
         try {
             ObjectQuery query = new ObjectQuery(objectSetDao.getObjectSet("" + setId));
             queryConnector.listObjects(query, this);

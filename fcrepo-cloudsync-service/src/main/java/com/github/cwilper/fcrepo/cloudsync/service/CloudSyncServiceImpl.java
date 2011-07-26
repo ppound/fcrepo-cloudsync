@@ -23,6 +23,7 @@ import com.github.cwilper.fcrepo.cloudsync.service.dao.SystemLogDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.TaskDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.TaskLogDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.UserDao;
+import com.github.cwilper.fcrepo.httpclient.HttpClientConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -55,7 +56,8 @@ public class CloudSyncServiceImpl implements CloudSyncService {
     private final TaskManager taskManager;
 
     public CloudSyncServiceImpl(DataSource dataSource,
-                                PlatformTransactionManager txMan) {
+                                PlatformTransactionManager txMan,
+                                HttpClientConfig httpClientConfig) {
         db = new JdbcTemplate(dataSource);
         TransactionTemplate tt = new TransactionTemplate(txMan);
 
@@ -73,7 +75,7 @@ public class CloudSyncServiceImpl implements CloudSyncService {
         }
         logger.info("Service initialization complete. Ready to handle requests.");
 
-        taskManager = new TaskManager(taskDao, taskLogDao, objectSetDao, objectStoreDao);
+        taskManager = new TaskManager(taskDao, taskLogDao, objectSetDao, objectStoreDao, httpClientConfig);
         taskManager.start();
     }
 

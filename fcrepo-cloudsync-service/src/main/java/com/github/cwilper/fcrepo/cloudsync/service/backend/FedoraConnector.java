@@ -31,12 +31,12 @@ public class FedoraConnector extends StoreConnector {
     private final FedoraHttpClient httpClient;
     private final RIClient riClient;
 
-    public FedoraConnector(ObjectStore store) {
+    public FedoraConnector(ObjectStore store, HttpClientConfig httpClientConfig) {
         Map<String, String> map = JSON.getMap(JSON.parse(store.getData()));
         String url = StringUtil.validate("url", map.get("url"));
         String username = StringUtil.validate("username", map.get("username"));
         String password = StringUtil.validate("password", map.get("password"));
-        httpClient = new FedoraHttpClient(new HttpClientConfig(),
+        httpClient = new FedoraHttpClient(httpClientConfig,
                 URI.create(url), username, password);
         riClient = new RIClient(httpClient);
     }

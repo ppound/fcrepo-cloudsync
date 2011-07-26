@@ -25,7 +25,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -46,7 +45,7 @@ public class DuraCloudConnector extends StoreConnector {
 
     private final MultiThreadedHttpClient httpClient;
 
-    public DuraCloudConnector(ObjectStore store) {
+    public DuraCloudConnector(ObjectStore store, HttpClientConfig httpClientConfig) {
         Map<String, String> map = JSON.getMap(JSON.parse(store.getData()));
         providerId = StringUtil.validate("providerId", map.get("providerId"));
         prefix = StringUtil.normalize(map.get("prefix"));
@@ -68,7 +67,7 @@ public class DuraCloudConnector extends StoreConnector {
                 port = 443;
             }
         }
-        httpClient = new MultiThreadedHttpClient(new HttpClientConfig());
+        httpClient = new MultiThreadedHttpClient(httpClientConfig);
         String username = StringUtil.validate("username", map.get("username"));
         String password = StringUtil.validate("password", map.get("password"));
         httpClient.getCredentialsProvider().setCredentials(
