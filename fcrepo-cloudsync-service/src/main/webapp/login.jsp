@@ -25,7 +25,7 @@ $(function() {
 
 <body>
 
-<form name='f' action='/cloudsync/j_spring_security_check' method='POST'>
+<form name='f' action='j_spring_security_check' method='POST'>
 <center>
 <p></p>
 <div id="login">
