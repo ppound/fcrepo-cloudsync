@@ -1,14 +1,13 @@
 package com.github.cwilper.fcrepo.cloudsync.service.dao;
 
-import com.github.cwilper.fcrepo.cloudsync.api.SystemLog;
-import org.springframework.jdbc.core.JdbcTemplate;
-
-import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.springframework.jdbc.core.JdbcTemplate;
+
+import com.github.cwilper.fcrepo.cloudsync.api.SystemLog;
 
 public class SystemLogDao extends AbstractDao {
 
