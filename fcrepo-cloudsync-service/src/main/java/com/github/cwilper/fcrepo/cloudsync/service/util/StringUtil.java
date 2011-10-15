@@ -54,7 +54,6 @@ public final class StringUtil {
     public static String validate(String name, String value, String[] validValues)
             throws IllegalArgumentException {
         String normVal = validate(name, value, Integer.MAX_VALUE);
-        boolean found = false;
         StringBuilder s = new StringBuilder();
         for (int i = 0; i < validValues.length; i++) {
             if (i > 0) {
