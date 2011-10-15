@@ -41,32 +41,36 @@ public class DuraCloudDao {
                                                String username,
                                                String password) {
         List<ProviderAccount> list = new ArrayList<ProviderAccount>();
+        String response = null;
         try {
-            Document doc = parseXML(
-                    get(url + "/stores", username, password));
+            response = get(url + "/stores", username, password);
+            Document doc = parseXML(response);
             Node root = doc.getDocumentElement();
             NodeList accountNodes = root.getChildNodes();
             for (int i = 0; i < accountNodes.getLength(); i++) {
                 Node accountNode = accountNodes.item(i);
-                ProviderAccount p = new ProviderAccount();
-                Node isPrimaryNode = accountNode.getAttributes().getNamedItem("isPrimary");
-                if (isPrimaryNode != null && isPrimaryNode.getNodeValue().equals("true")) {
-                    p.setPrimary(true);
-                }
-                NodeList childNodes = accountNode.getChildNodes();
-                for (int j = 0; j < childNodes.getLength(); j++) {
-                    Node childNode = childNodes.item(j);
-                    if (childNode.getNodeName().equals("storageProviderType")) {
-                        p.setType(childNode.getTextContent());
-                    } else if (childNode.getNodeName().equals("id")) {
-                        p.setId(childNode.getTextContent());
+                if (accountNode.getNodeType() == Node.ELEMENT_NODE) {
+                    ProviderAccount p = new ProviderAccount();
+                    Node isPrimaryNode = accountNode.getAttributes().getNamedItem("isPrimary");
+                    if (isPrimaryNode != null && isPrimaryNode.getNodeValue().equals("true")) {
+                        p.setPrimary(true);
                     }
+                    NodeList childNodes = accountNode.getChildNodes();
+                    for (int j = 0; j < childNodes.getLength(); j++) {
+                        Node childNode = childNodes.item(j);
+                        if (childNode.getNodeName().equals("storageProviderType")) {
+                            p.setType(childNode.getTextContent());
+                        } else if (childNode.getNodeName().equals("id")) {
+                            p.setId(childNode.getTextContent());
+                        }
+                    }
+                    list.add(p);
                 }
-                list.add(p);
             }
             return list;
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error parsing response: " + response,
+                                       e);
         }
     }
 
@@ -75,10 +79,11 @@ public class DuraCloudDao {
                                   String password,
                                   String providerAccountId) {
         List<Space> list = new ArrayList<Space>();
+        String response = null;
         try {
-            Document doc = parseXML(
-                    get(url + "/spaces?storeID=" + providerAccountId,
-                            username, password));
+            response = get(url + "/spaces?storeID=" + providerAccountId,
+                           username, password);
+            Document doc = parseXML(response);
             Node root = doc.getDocumentElement();
             NodeList spaceNodes = root.getChildNodes();
             for (int i = 0; i < spaceNodes.getLength(); i++) {
@@ -90,7 +95,8 @@ public class DuraCloudDao {
             }
             return list;
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error parsing response: " + response,
+                                       e);
         }
     }
 
