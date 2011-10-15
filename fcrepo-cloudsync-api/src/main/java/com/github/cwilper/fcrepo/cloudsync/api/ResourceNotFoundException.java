@@ -2,7 +2,12 @@ package com.github.cwilper.fcrepo.cloudsync.api;
 
 public class ResourceNotFoundException extends Exception {
 
-    public ResourceNotFoundException(String message) {
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public ResourceNotFoundException(String message) {
         super(message);
     }
 

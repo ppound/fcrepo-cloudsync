@@ -2,7 +2,9 @@ package com.github.cwilper.fcrepo.cloudsync.api;
 
 public class NameConflictException extends Exception {
 
-    public NameConflictException(String message) {
+	private static final long serialVersionUID = 1L;
+
+	public NameConflictException(String message) {
         super(message);
     }
 
