@@ -137,7 +137,7 @@ public abstract class StoreConnector {
             HttpResponse response = httpClient.execute(post);
             entity = response.getEntity();
             int responseCode = response.getStatusLine().getStatusCode();
-            if (responseCode != 200 && responseCode != 201 && responseCode != 204) {
+            if (responseCode < 200 || responseCode > 204) {
                 throw new RuntimeException("Unexpected response code (" + responseCode + ") posting " + url);
             }
         } catch (IOException e) {
@@ -157,6 +157,9 @@ public abstract class StoreConnector {
         HttpPut put = new HttpPut(url);
         HttpEntity entity = null;
         try {
+            if (mimeType == null || mimeType.trim().length() == 0) {
+                mimeType = "application/octet-stream";
+            }
             put.setEntity(new FileEntity(file, mimeType));
             HttpResponse response = httpClient.execute(put);
             entity = response.getEntity();
@@ -185,7 +188,9 @@ public abstract class StoreConnector {
     public abstract FedoraObject getObject(String pid);
 
     // true if the object previously existed
-    public abstract boolean putObject(FedoraObject o, boolean overwrite);
+    public abstract boolean putObject(FedoraObject o,
+                                      StoreConnector source,
+                                      boolean overwrite);
 
     public abstract InputStream getContent(FedoraObject o,
                                            Datastream ds,

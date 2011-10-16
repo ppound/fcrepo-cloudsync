@@ -822,12 +822,17 @@ $(function() {
         if ($("#NewCopyTask-overwrite").is(":checked")) {
           overwrite = "true";
         }
+        var includeManaged = "false";
+        if ($("#NewCopyTask-includeManaged").is(":checked")) {
+          includeManaged = "true";
+        }
         var typeSpecificData = {
-          "setId"        : $("#NewCopyTask-setId").val(),
-          "queryStoreId" : $("#NewCopyTask-queryStoreId").val(),
-          "sourceStoreId": $("#NewCopyTask-sourceStoreId").val(),
-          "destStoreId"  : $("#NewCopyTask-destStoreId").val(),
-          "overwrite"    : overwrite
+          "setId"          : $("#NewCopyTask-setId").val(),
+          "queryStoreId"   : $("#NewCopyTask-queryStoreId").val(),
+          "sourceStoreId"  : $("#NewCopyTask-sourceStoreId").val(),
+          "destStoreId"    : $("#NewCopyTask-destStoreId").val(),
+          "overwrite"      : overwrite,
+          "includeManaged" : includeManaged
         };
         var state = "Idle";
         if ($("#NewCopyTask-runNow").is(":checked")) {

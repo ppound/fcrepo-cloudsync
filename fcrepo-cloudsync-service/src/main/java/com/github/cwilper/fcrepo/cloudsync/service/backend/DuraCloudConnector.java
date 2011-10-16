@@ -1,29 +1,5 @@
 package com.github.cwilper.fcrepo.cloudsync.service.backend;
 
-import com.github.cwilper.fcrepo.cloudsync.api.ObjectInfo;
-import com.github.cwilper.fcrepo.cloudsync.api.ObjectStore;
-import com.github.cwilper.fcrepo.cloudsync.service.util.JSON;
-import com.github.cwilper.fcrepo.cloudsync.service.util.StringUtil;
-import com.github.cwilper.fcrepo.dto.core.Datastream;
-import com.github.cwilper.fcrepo.dto.core.DatastreamVersion;
-import com.github.cwilper.fcrepo.dto.core.FedoraObject;
-import com.github.cwilper.fcrepo.dto.foxml.FOXMLReader;
-import com.github.cwilper.fcrepo.dto.foxml.FOXMLWriter;
-import com.github.cwilper.fcrepo.httpclient.HttpClientConfig;
-import com.github.cwilper.fcrepo.httpclient.MultiThreadedHttpClient;
-import com.github.cwilper.ttff.Filter;
-import org.apache.commons.io.IOUtils;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -32,12 +8,45 @@ import java.io.OutputStream;
 import java.io.StringReader;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+
+import com.github.cwilper.fcrepo.cloudsync.api.ObjectInfo;
+import com.github.cwilper.fcrepo.cloudsync.api.ObjectStore;
+import com.github.cwilper.fcrepo.cloudsync.service.util.JSON;
+import com.github.cwilper.fcrepo.cloudsync.service.util.StringUtil;
+import com.github.cwilper.fcrepo.dto.core.ControlGroup;
+import com.github.cwilper.fcrepo.dto.core.Datastream;
+import com.github.cwilper.fcrepo.dto.core.DatastreamVersion;
+import com.github.cwilper.fcrepo.dto.core.FedoraObject;
+import com.github.cwilper.fcrepo.dto.foxml.FOXMLReader;
+import com.github.cwilper.fcrepo.dto.foxml.FOXMLWriter;
+import com.github.cwilper.fcrepo.httpclient.HttpClientConfig;
+import com.github.cwilper.fcrepo.httpclient.MultiThreadedHttpClient;
+import com.github.cwilper.ttff.Filter;
 
 public class DuraCloudConnector extends StoreConnector {
 
     private static final int CHUNKSIZE = 999;
+    private static final Logger logger = 
+            LoggerFactory.getLogger(DuraCloudConnector.class);
 
     private final URI spaceURI;
     private final String providerId;
@@ -104,7 +113,9 @@ public class DuraCloudConnector extends StoreConnector {
     }
 
     @Override
-    public boolean putObject(FedoraObject o, boolean overwrite) {
+    public boolean putObject(FedoraObject o,
+                             StoreConnector source,
+                             boolean overwrite) {
         boolean existed = hasObject(o.pid());
         if (existed) {
             if (!overwrite) {
@@ -115,13 +126,13 @@ public class DuraCloudConnector extends StoreConnector {
         File tempFile = null;
         OutputStream out = null;
         try {
-            // write to temp file
+            // write foxml to temp file
             tempFile = File.createTempFile("cloudsync", null);
             out = new FileOutputStream(tempFile);
             writer.writeObject(o, out);
             out.close();
-            // put it
-            put(httpClient, getContentURI(o.pid()), tempFile, "application/xml");
+            // upload managed datastream content and foxml to DuraCloud
+            putObject(o, source, tempFile);
             return existed;
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -131,6 +142,64 @@ public class DuraCloudConnector extends StoreConnector {
                 tempFile.delete();
             }
             writer.close();
+        }
+    }
+   
+    private void putObject(FedoraObject o,
+                           StoreConnector source,
+                           File foxmlFile) throws IOException {
+        boolean success = false;
+        Set<String> uris = new HashSet<String>();
+        try {
+            String oURI = getContentURI(o.pid());
+            uris.add(oURI);
+            put(httpClient, oURI, foxmlFile, "application/xml");
+            for (Datastream ds: o.datastreams().values()) {
+                if (ds.controlGroup().equals(ControlGroup.MANAGED)) {
+                    putVersions(o, ds, source, uris);
+                }
+            }
+            success = true;
+        } finally {
+            if (!success) {
+                logger.info("Cleaning up after failure to put {}", o.pid());
+                for (String uri: uris) {
+                    try {
+                        delete(httpClient, uri);
+                    } catch (Exception e) {
+                        logger.warn("Error cleaning up " + uri, e);
+                    }
+                }
+            }
+        }
+    }
+    
+    private void putVersions(FedoraObject o,
+                             Datastream ds,
+                             StoreConnector source,
+                             Set<String> urls) throws IOException {
+        for (DatastreamVersion dsv: ds.versions()) {
+            InputStream in = source.getContent(o,  ds, dsv);
+            File tempFile = File.createTempFile("cloudsync", null);
+            OutputStream out = new FileOutputStream(tempFile);
+            try {
+                // copy content to local temporary file first
+                try {
+                    IOUtils.copyLarge(in,  out);
+                } finally {
+                    IOUtils.closeQuietly(in);
+                    IOUtils.closeQuietly(out);
+                }
+                // then send it to the remote destination
+                String url = getContentURI(o.pid() + "+" + ds.id() + "+" + dsv.id());
+                put(httpClient, url, tempFile, dsv.mimeType());
+                urls.add(url);
+            } finally {
+                // finally, delete the local copy
+                if (!tempFile.delete()) {
+                    logger.warn("Failed to delete temporary file {}", tempFile);
+                }
+            }
         }
     }
 
@@ -149,9 +218,8 @@ public class DuraCloudConnector extends StoreConnector {
 
     @Override
     public InputStream getContent(FedoraObject o, Datastream ds, DatastreamVersion dsv) {
-        // https://demo.duracloud.org/durastore/cwilper-test/content-id?storeID=0
-        // note: if content-id has slashes, they should not be URL-encoded
-        return null;
+        String url = getContentURI(o.pid() + "+" + ds.id() + "+" + dsv.id());
+        return getStream(httpClient, url);
     }
 
     @Override

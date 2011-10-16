@@ -22,8 +22,10 @@ public class PIDPatternFilter extends AbstractFilter<String> {
         }
     }
 
+    // TODO: Make PID syntax checks more robust
     private boolean isPid(String value) {
         if ( (value == null)
+                || (value.indexOf("+") != -1)
                 || (value.indexOf("/") != -1)
                 || (value.indexOf(" ") != -1) ) {
             return false;

@@ -195,6 +195,12 @@
       </td>
     </tr>
     <tr>
+      <td>Include Objects with Managed Content</td>
+      <td>
+        <input type="checkbox" id="NewCopyTask-includeManaged" checked="checked"/>
+      </td>
+    </tr>
+    <tr>
       <td>Run Now</td>
       <td>
         <input type="checkbox" id="NewCopyTask-runNow" checked="checked"/>

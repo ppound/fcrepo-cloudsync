@@ -1,12 +1,36 @@
 package com.github.cwilper.fcrepo.cloudsync.service.backend;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.mime.HttpMultipartMode;
+import org.apache.http.entity.mime.MultipartEntity;
+import org.apache.http.entity.mime.content.FileBody;
+import org.apache.http.util.EntityUtils;
+import org.openrdf.model.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.github.cwilper.fcrepo.cloudsync.api.ObjectInfo;
 import com.github.cwilper.fcrepo.cloudsync.api.ObjectStore;
 import com.github.cwilper.fcrepo.cloudsync.service.util.JSON;
 import com.github.cwilper.fcrepo.cloudsync.service.util.StringUtil;
+import com.github.cwilper.fcrepo.dto.core.ControlGroup;
 import com.github.cwilper.fcrepo.dto.core.Datastream;
 import com.github.cwilper.fcrepo.dto.core.DatastreamVersion;
 import com.github.cwilper.fcrepo.dto.core.FedoraObject;
+import com.github.cwilper.fcrepo.dto.core.io.DateUtil;
 import com.github.cwilper.fcrepo.dto.foxml.FOXMLReader;
 import com.github.cwilper.fcrepo.dto.foxml.FOXMLWriter;
 import com.github.cwilper.fcrepo.httpclient.FedoraHttpClient;
@@ -14,19 +38,11 @@ import com.github.cwilper.fcrepo.httpclient.HttpClientConfig;
 import com.github.cwilper.fcrepo.riclient.RIClient;
 import com.github.cwilper.fcrepo.riclient.RIQueryResult;
 import com.github.cwilper.ttff.Filter;
-import org.apache.commons.io.IOUtils;
-import org.openrdf.model.Value;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.URI;
-import java.util.List;
-import java.util.Map;
 
 public class FedoraConnector extends StoreConnector {
+    
+    private static final Logger logger = 
+            LoggerFactory.getLogger(FedoraConnector.class);
 
     private final FedoraHttpClient httpClient;
     private final RIClient riClient;
@@ -79,7 +95,9 @@ public class FedoraConnector extends StoreConnector {
     }
 
     @Override
-    public boolean putObject(FedoraObject o, boolean overwrite) {
+    public boolean putObject(FedoraObject o, 
+                             StoreConnector source,
+                             boolean overwrite) {
         boolean existed = hasObject(o.pid());
         if (existed) {
             if (overwrite) {
@@ -92,12 +110,14 @@ public class FedoraConnector extends StoreConnector {
         File tempFile = null;
         OutputStream out = null;
         try {
-            // write to temp file
+            // stage any managed datastream content, changing refs as needed
+            stageManagedContent(o, source);
+            // write foxml to temp file
             tempFile = File.createTempFile("cloudsync", null);
             out = new FileOutputStream(tempFile);
             writer.writeObject(o, out);
             out.close();
-            // post it
+            // ingest object into Fedora
             post(httpClient, getObjectURI(o.pid()), tempFile, "text/xml");
             return existed;
         } catch (IOException e) {
@@ -110,6 +130,66 @@ public class FedoraConnector extends StoreConnector {
             writer.close();
         }
     }
+    
+    private void stageManagedContent(FedoraObject o,
+                                     StoreConnector source) throws IOException {
+        for (Datastream ds: o.datastreams().values()) {
+            if (ds.controlGroup().equals(ControlGroup.MANAGED)) {
+                stageVersions(o, ds, source);
+            }
+        }
+    }
+    
+    private void stageVersions(FedoraObject o,
+                               Datastream ds,
+                               StoreConnector source) throws IOException {
+        for (DatastreamVersion dsv: ds.versions()) {
+            InputStream in = source.getContent(o,  ds, dsv);
+            File tempFile = File.createTempFile("cloudsync", null);
+            OutputStream out = new FileOutputStream(tempFile);
+            try {
+                // copy content to local temporary file first
+                try {
+                    IOUtils.copyLarge(in,  out);
+                } finally {
+                    IOUtils.closeQuietly(in);
+                    IOUtils.closeQuietly(out);
+                }
+                // upload and set content location accordingly
+                dsv.contentLocation(upload(tempFile));
+            } finally {
+                // finally, delete the local copy
+                if (!tempFile.delete()) {
+                    logger.warn("Failed to delete temporary file {}", tempFile);
+                }
+            }
+        }
+    }    
+   
+    private URI upload(File file) throws IOException {
+        String url = httpClient.getBaseURI() + "/upload";
+        logger.debug("Doing Multipart POST on " + url);
+        HttpPost post = new HttpPost(url);
+        String body = null;
+        try {
+            FileBody fileBody = new FileBody(file);
+            MultipartEntity reqEntity =
+                    new MultipartEntity(HttpMultipartMode.STRICT);
+            reqEntity.addPart("file", fileBody);
+            post.setEntity(reqEntity);
+            HttpResponse response = httpClient.execute(post);
+            HttpEntity resEntity = response.getEntity();
+            int responseCode = response.getStatusLine().getStatusCode();
+            if (responseCode != 202) {
+                throw new RuntimeException("Unexpected response code (" + responseCode + ") posting " + url);
+            }
+            body = EntityUtils.toString(resEntity, "UTF-8");
+            return new URI(body);
+        } catch (URISyntaxException e) {
+            throw new IOException("Error staging datastream content; "
+                    + "response to /upload request was not a URI: " + body);
+        }
+    }
 
     private String getObjectURI(String pid) {
         return httpClient.getBaseURI() + "/objects/" + pid;
@@ -117,7 +197,10 @@ public class FedoraConnector extends StoreConnector {
 
     @Override
     public InputStream getContent(FedoraObject o, Datastream ds, DatastreamVersion dsv) {
-        return null;
+        String url = getObjectURI(o.pid()) + "/datastreams/" + ds.id()
+                + "/content?asOfDateTime=" 
+                + DateUtil.toString(dsv.createdDate());
+        return getStream(httpClient, url);
     }
 
     @Override

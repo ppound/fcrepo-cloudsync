@@ -24,6 +24,7 @@ public class CopyTaskRunner extends TaskRunner implements ObjectListHandler {
     private final Integer sourceStoreId;
     private final Integer destStoreId;
     private final boolean overwrite;
+    private final boolean includeManaged;
 
     private final Set<Integer> relatedSetIds = new HashSet<Integer>();
     private final Set<Integer> relatedStoreIds = new HashSet<Integer>();
@@ -43,13 +44,19 @@ public class CopyTaskRunner extends TaskRunner implements ObjectListHandler {
                           PrintWriter logWriter,
                           TaskCompletionListener completionListener,
                           HttpClientConfig httpClientConfig) {
-        super(task, taskDao, objectSetDao, objectStoreDao, logWriter, completionListener);
+        super(task, taskDao, objectSetDao, objectStoreDao, logWriter,
+                completionListener);
         Map<String, String> map = JSON.getMap(JSON.parse(task.getData()));
         setId = Integer.parseInt(map.get("setId"));
         queryStoreId = Integer.parseInt(map.get("queryStoreId"));
         sourceStoreId = Integer.parseInt(map.get("sourceStoreId"));
         destStoreId = Integer.parseInt(map.get("destStoreId"));
-        overwrite = StringUtil.validate("overwrite", map.get("overwrite"), new String[] { "true", "false" }).equals("true");
+        overwrite = StringUtil.validate("overwrite",
+                map.get("overwrite"),
+                new String[] { "true", "false" }).equals("true");
+        includeManaged = StringUtil.validate("includeManaged",
+                map.get("includeManaged"),
+                new String[] { "true", "false" }).equals("true");
         relatedSetIds.add(setId);
         relatedStoreIds.add(queryStoreId);
         relatedStoreIds.add(sourceStoreId);
@@ -59,11 +66,18 @@ public class CopyTaskRunner extends TaskRunner implements ObjectListHandler {
 
     @Override
     public void runTask() throws Exception {
-        queryConnector = StoreConnector.getInstance(objectStoreDao.getObjectStore("" + queryStoreId), httpClientConfig);
-        sourceConnector = StoreConnector.getInstance(objectStoreDao.getObjectStore("" + sourceStoreId), httpClientConfig);
-        destConnector = StoreConnector.getInstance(objectStoreDao.getObjectStore("" + destStoreId), httpClientConfig);
+        queryConnector = StoreConnector.getInstance(
+                objectStoreDao.getObjectStore("" + queryStoreId),
+                httpClientConfig);
+        sourceConnector = StoreConnector.getInstance(
+                objectStoreDao.getObjectStore("" + sourceStoreId),
+                httpClientConfig);
+        destConnector = StoreConnector.getInstance(
+                objectStoreDao.getObjectStore("" + destStoreId),
+                httpClientConfig);
         try {
-            ObjectQuery query = new ObjectQuery(objectSetDao.getObjectSet("" + setId));
+            ObjectQuery query = new ObjectQuery(
+                    objectSetDao.getObjectSet("" + setId));
             queryConnector.listObjects(query, this);
             if (canceledException != null) {
                 throw canceledException;
@@ -104,19 +118,19 @@ public class CopyTaskRunner extends TaskRunner implements ObjectListHandler {
     private void doCopy(String pid) {
         FedoraObject o = sourceConnector.getObject(pid);
         if (o != null) {
-            if (countManagedDatastreams(o) > 0) {
-                logWriter.println("SKIPPED (managed datastream copying NOT IMPLEMENTED)");
-            } else if (destConnector.putObject(o, overwrite)) {
+            if (!includeManaged && countManagedDatastreams(o) > 0) {
+                logWriter.println("SKIPPED (has managed datastream(s))");
+            } else if (destConnector.putObject(o, sourceConnector, overwrite)) {
                 if (overwrite) {
-                    logWriter.println("REPLACED (object existed in destination)");
+                    logWriter.println("REPLACED (exists in destination)");
                 } else {
-                    logWriter.println("SKIPPED (object existed in destination)");
+                    logWriter.println("SKIPPED (exists in destination)");
                 }
             } else {
-                logWriter.println("OK (object is new in destination)");
+                logWriter.println("OK (new in destination)");
             }
         } else {
-            logWriter.println("SKIPPED (object does not exist in source)");
+            logWriter.println("SKIPPED (does not exist in source)");
         }
     }
 
