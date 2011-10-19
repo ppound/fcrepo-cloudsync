@@ -6,8 +6,7 @@
   <!-- Allows use of ${refs-like-this} sourced from System properties. -->
   <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer"/>
 
-  <import resource="security.xml"/>
   <import resource="rest-api.xml"/>
-  <import resource="svc-impl.xml"/>
+  <import resource="service-impl.xml"/>
 
 </beans>

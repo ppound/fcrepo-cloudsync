@@ -25,7 +25,8 @@
 </div>
 
 <div id="logout">
-  <span id="whoami">Logged in as <span id="username">...</span></span><br/>
+  <span id="userid" style="color: #ffffff"></span>
+  <button id="button-Account">...</button>
   <button id="button-Logout">Logout</button>
 </div>
 
@@ -112,6 +113,19 @@
     </div>
   </div>
 
+  <div id="users" class="tab ui-helper-hidden">
+    <div class="tab-header">
+      <button id="button-NewUser">Add</button>
+    </div>
+    <div class="tab-body">
+      <div class="tab-section">
+        <h2>All Users</h2>
+        <div id="users-all" class="tab-section-body">
+          ...
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Tasks -->
@@ -398,6 +412,44 @@
 </div>
 
 <!-- Misc -->
+
+<div class="ui-helper-hidden" id="dialog-NewUser" title="New User">
+  <table>
+    <tr>
+      <td>Username</td>
+      <td><input id="NewUser-username" type="text" size="20"/></td>
+    </tr>
+    <tr>
+      <td>Password</td>
+      <td><input id="NewUser-password1" type="password" size="20"/></td>
+    </tr>
+    <tr>
+      <td>Password (again)</td>
+      <td><input id="NewUser-password2" type="password" size="20"/></td>
+    </tr>
+    <tr>
+      <td>Administrator</td>
+      <td><input id="NewUser-admin" type="checkbox"/></td>
+    </tr>
+  </table>
+</div>
+
+<div class="ui-helper-hidden" id="dialog-account" title="Change Password">
+  <table>
+    <tr>
+      <td>Username<span id="account-id" class="ui-helper-hidden"></span></td>
+      <td id="account-username">...</td>
+    </tr>
+    <tr>
+      <td>New Password</td>
+      <td><input id="account-password1" type="password" size="20"/></td>
+    </tr>
+    <tr>
+      <td>New Password (again)</td>
+      <td><input id="account-password2" type="password" size="20"/></td>
+    </tr>
+  </table>
+</div>
 
 <div class="ui-helper-hidden" id="dialog-confirm" title="Are you sure?">
   ...

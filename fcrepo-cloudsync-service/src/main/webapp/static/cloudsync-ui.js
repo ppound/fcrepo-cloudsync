@@ -5,6 +5,7 @@ var numActiveTasks = 0;
 var secondsSinceTaskRefresh = 0;
 var secondsSinceSetRefresh = 0;
 var secondsSinceStoreRefresh = 0;
+var secondsSinceUserRefresh = 0;
 
 function esc(value) {
   return value.replace(/&/g, "&amp;")
@@ -40,6 +41,13 @@ function refreshStores() {
     doSection(data.objectstores, "stores-fedora", getFedoraStoreHtml);
     secondsSinceStoreRefresh = 0;
   });
+}
+
+function refreshUsers() {
+  service.listUsers(function(data) {
+    doSection(data.users, "users-all", getUserHtml);
+  });
+  secondsSinceUserRefresh = 0;
 }
 
 function doSetTaskState(id, state) {
@@ -252,6 +260,61 @@ function doForgetObjectStore(id, name) {
   $("#dialog-confirm").dialog("open");
 }
 
+function doChangePassword(id, name) {
+  $("#account-id").html(id);
+  $("#account-username").html(name);
+  $("#account-password1").val("");
+  $("#account-password2").val("");
+  $("#dialog-account").dialog("open");
+}
+
+function doDemoteUser(id) {
+  doUpdateUser(id, { user: { "admin" : "false" } });
+}
+
+function doPromoteUser(id) {
+  doUpdateUser(id, { user: { "admin" : "true" } });
+}
+
+function doDisableUser(id) {
+  doUpdateUser(id, { user: { "enabled" : "false" } });
+}
+
+function doEnableUser(id) {
+  doUpdateUser(id, { user: { "enabled" : "true" } });
+}
+
+function doUpdateUser(id, data) {
+  service.updateUser(id, data, function() {
+    refreshUsers();
+  }, function(httpRequest, method, url) {
+    alert("[Service Error]\n\nUnexpected HTTP response code ("
+        + httpRequest.status + ") from request:\n\n" + method + " " + url);
+  });
+}
+
+function doDeleteUser(id, name) {
+  $("#dialog-confirm").html("<span class=\"ui-icon ui-icon-alert\" style=\"float:left; margin:0 7px 20px 0;\"/>Delete User <strong>" + esc(name) + "</strong>?");
+  $("#dialog-confirm").dialog("option", "buttons", {
+    "No": function() {
+      $(this).dialog("close");
+    },
+    "Yes": function() {
+      $(this).dialog("close");
+      service.deleteUser(id,
+        function() {
+          refreshUsers();
+        },
+        function(httpRequest, method, url) {
+          alert("[Service Error]\n\nUnexpected HTTP response code ("
+              + httpRequest.status + ") from request:\n\n" + method + " " + url);
+        }
+      );
+    }
+  });
+  $("#dialog-confirm").dialog("open");
+}
+
 function getDuraCloudStoreHtml(item) {
   var html = "";
   if (item.type == "duracloud") {
@@ -262,7 +325,6 @@ function getDuraCloudStoreHtml(item) {
     html += "<div><table>";
     html += "  <tr><td><strong>DuraStore URL:</strong></td><td>" + esc(data.url) + "</td></tr>";
     html += "  <tr><td><strong>Username:</strong></td><td>" + esc(data.username) + "</td></tr>";
-    html += "  <tr><td><strong>Password:</strong></td><td>(Not shown)</td></tr>";
     html += "  <tr><td><strong>Storage Provider:</strong></td><td>" + esc(data.providerName) + "</td></tr>";
     html += "  <tr><td><strong>Space:</strong></td><td>" + esc(data.space) + "</td></tr>";
     var prefix = data.prefix;
@@ -285,9 +347,41 @@ function getFedoraStoreHtml(item) {
     html += "<div><table>";
     html += "  <tr><td><strong>Base URL:</strong></td><td>" + esc(data.url) + "</td></tr>";
     html += "  <tr><td><strong>Username:</strong></td><td>" + esc(data.username) + "</td></tr>";
-    html += "  <tr><td><strong>Password:</strong></td><td>(Not shown)</td></tr>";
     html += "</table></div>";
   }
+  return html;
+}
+
+function getUserHtml(item) {
+  var html = "";
+  html += "<div class='item-actions'>";
+  html += "  <button onClick='doChangePassword(" + item.id + ", \"" + esc(item.name) + "\");'>Change Password</button>";
+  if (item.admin && item.id != $("#userid").text()) {
+    html += "  <button onClick='doDemoteUser(" + item.id + ");'>Demote</button>";
+  } else if (!item.admin) {
+    html += "  <button onClick='doPromoteUser(" + item.id + ");'>Promote</button>";
+  }
+  if (item.enabled && item.id != $("#userid").text()) {
+    html += "  <button onClick='doDisableUser(" + item.id + ");'>Disable</button>";
+  } else if (!item.enabled) {
+    html += "  <button onClick='doEnableUser(" + item.id + ");'>Enable</button>";
+  }
+  if (item.id != $("#userid").text()) {
+    html += "  <button onClick='doDeleteUser(" + item.id + ", \"" + esc(item.name) + "\");'>Delete</button>";
+  }
+  html += "</div>";
+  html += "<div><table>";
+  var isAdmin = "No";
+  if (item.admin) {
+    isAdmin = "Yes"
+  }
+  var isEnabled = "Yes";
+  if (!item.enabled) {
+    isEnabled = "No";
+  }
+  html += "  <tr><td><strong>Administrator:</strong></td><td>" + isAdmin + "</td></tr>";
+  html += "  <tr><td><strong>Enabled:</strong></td><td>" + isEnabled + "</td></tr>";
+  html += "</table></div>";
   return html;
 }
 
@@ -341,6 +435,7 @@ function getExpandable(title, bodyHtml, id) {
 var loadedTasks = false;
 var loadedSets = false;
 var loadedStores = false;
+var loadedUsers = false;
 
 $(function() {
 
@@ -364,6 +459,9 @@ $(function() {
     }
   );
 
+  $("#button-Account").click(function() {
+      doChangePassword($("#userid").text(), $("#button-Account").text());
+  });
 
   $("#tabs").tabs({
     show: function(event, ui) {
@@ -376,9 +474,25 @@ $(function() {
       } else if (ui.index == 2 && !loadedStores) {
         loadedStores = true;
         refreshStores();
+      } else if (ui.index == 3 && !loadedUsers) {
+        loadedUsers = true;
+        refreshUsers();
       }
     }
   });
+
+  // Show user-specific UI elements
+  service.getCurrentUser(function(data, status, x) {
+    $("#button-Account").html(data.user.name);
+    $("#button-Account").button({
+      icons: { primary: "ui-icon-gear" }
+    });
+    $("#userid").text(data.user.id);
+    if (data.user.admin) {
+      $("#tabs").tabs("add", "#users", "Users");
+    }
+  });
+
 
   $("#button-NewTask").button({
     icons: { primary: "ui-icon-plus" }
@@ -409,6 +523,95 @@ $(function() {
       $("#dialog-NewStore").dialog("open");
     }
   );
+
+  $("#button-NewUser").button({
+    icons: { primary: "ui-icon-plus" }
+  });
+
+  $("#button-NewUser").click(
+    function() {
+      $("#NewUser-username").val("");
+      $("#NewUser-password1").val("");
+      $("#NewUser-password2").val("");
+      $("#dialog-NewUser").dialog("open");
+    }
+  );
+
+  $("#dialog-NewUser").dialog({                                              
+      autoOpen: false,                                                          
+      modal: true,                                                              
+      width: 'auto',                                                            
+      show: 'fade',                                                             
+      hide: 'fade',
+      buttons: {
+        "Create Account": function() {
+          var username = $("#NewUser-username").val();
+          var pass1 = $("#NewUser-password1").val();
+          var pass2 = $("#NewUser-password2").val();
+          if (username != "" && pass1 != "" && pass1 == pass2) {
+            var admin = $("#NewUser-admin").is(":checked");
+            var data = { user: {
+              "name" : username,
+              "password" : pass1,
+              "enabled" : true,
+              "admin" : admin
+            }};
+            service.createUser(data,
+              function() {
+                $("#dialog-NewUser").dialog("close");
+                refreshUsers();
+              },
+              function(httpRequest, method, url, textStatus) {
+                alert("Account Creation Failed: " + textStatus);
+              }
+            );
+          } else if (username == "") {
+              alert("Username cannot be blank!");
+          } else if (pass1 == "") {
+              alert("Password cannot be blank!");
+          } else {
+              alert("Passwords do not match!");
+          }
+        }
+      }
+    }
+  );
+
+  $("#dialog-account").dialog({                                              
+      autoOpen: false,                                                          
+      modal: true,                                                              
+      width: 'auto',                                                            
+      show: 'fade',                                                             
+      hide: 'fade',
+      buttons: {
+        "Save Changes": function() {
+          var pass1 = $("#account-password1").val();
+          var pass2 = $("#account-password2").val();
+          var id = $("#account-id").text();
+          if (pass1 != "" && pass1 == pass2) {
+            var data = { user: {                                        
+              "password" : pass1
+            }};                                                                   
+            service.updateUser(id, data,
+              function() {                                                      
+                $("#dialog-account").dialog("close");                              
+                if (id == $("#userid").html()) {
+                  document.location = 'j_spring_security_logout';
+                }
+              },                                                                
+              function(httpRequest, method, url, textStatus) {                  
+                alert("Saving Changes Failed: " + textStatus);              
+              }                                                                 
+            );                                                                    
+          } else if (pass1 == "") {                                                 
+              alert("Password cannot be blank!");                                   
+          } else {                                                                  
+              alert("Passwords do not match!");                                     
+          }
+        }
+      }
+  });                                                                           
+
 
   $("#dialog-confirm").dialog({
     autoOpen: false,
@@ -853,25 +1056,25 @@ $(function() {
     }
   });
 
-  service.getCurrentUser(function(data, status, x) {
-    $("#username").text(data.user.name);
-  });
-
-  // refresh content of selected tab every 30 seconds,
+  // refresh content of selected tab every 60 seconds,
   // or every 5 seconds for tasks if any are active
   setInterval(function() {
     var selectedTab = $("#tabs").tabs("option", "selected");
     secondsSinceTaskRefresh += 5;
-    if (selectedTab === 0 && (numActiveTasks > 0 || secondsSinceTaskRefresh >= 30)) {
+    if (selectedTab === 0 && (numActiveTasks > 0 || secondsSinceTaskRefresh >= 60)) {
       refreshTasks();
     }
     secondsSinceSetRefresh += 5;
-    if (selectedTab === 1 && secondsSinceSetRefresh >= 30) {
+    if (selectedTab === 1 && secondsSinceSetRefresh >= 60) {
       refreshSets();
     }
     secondsSinceStoreRefresh += 5;
-    if (selectedTab === 2 && secondsSinceStoreRefresh >= 30) {
+    if (selectedTab === 2 && secondsSinceStoreRefresh >= 60) {
       refreshStores();
+    }
+    secondsSinceUserRefresh += 5;
+    if (selectedTab === 3 && secondsSinceUserRefresh >= 60) {
+      refreshUsers();
     }
   }, 5000);
 
@@ -900,14 +1103,14 @@ function showNewCopyTaskName() {
 }
 
 function showAbout() {
-  service.getConfiguration(function(data) {
+  service.getServiceInfo(function(data) {
     $("#dialog-about").dialog("option", "buttons", {
       "Ok": function() {
         $(this).dialog("close");
       }
     });
-    $("#version").text(data.configuration.cloudSyncVersion);
-    $("#builddate").text(data.configuration.cloudSyncBuildDate);
+    $("#version").text(data.service.version);
+    $("#builddate").text(data.service.buildDate);
     $("#dialog-about").dialog("open");
   });
 }

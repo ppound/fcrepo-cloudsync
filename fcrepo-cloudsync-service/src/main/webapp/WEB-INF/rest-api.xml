@@ -12,7 +12,7 @@ http://www.springframework.org/schema/util http://www.springframework.org/schema
 
   <jaxrs:server id="restService" address="/rest">
     <jaxrs:serviceBeans>
-      <ref bean="configurationResource"/>
+      <ref bean="serviceInfoResource"/>
       <ref bean="userResource"/>
       <ref bean="taskResource"/>
       <ref bean="objectSetResource"/>
@@ -45,8 +45,8 @@ http://www.springframework.org/schema/util http://www.springframework.org/schema
     <property name="arrayKeys" ref="jsonArrayKeys"/>
   </bean>
 
-  <bean id="configurationResource"
-        class="com.github.cwilper.fcrepo.cloudsync.service.rest.ConfigurationResource">
+  <bean id="serviceInfoResource"
+        class="com.github.cwilper.fcrepo.cloudsync.service.rest.ServiceInfoResource">
     <constructor-arg ref="serviceImpl"/>
   </bean>
   <bean id="userResource"

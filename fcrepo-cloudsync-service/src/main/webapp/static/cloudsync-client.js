@@ -24,15 +24,15 @@ function CloudSyncClient(baseURL) {
   //==========================================================================
 
   //--------------------------------------------------------------------------
-  //                             Configuration
+  //                             Service Info
   //--------------------------------------------------------------------------
 
-  this.getConfiguration = function(success, error) {
-    doGet("configuration", success, error);
+  this.getServiceInfo = function(success, error) {
+    doGet("service", success, error);
   };
 
-  this.updateConfiguration = function(data, success, error) {
-    doPut("configuration", data, success, error);
+  this.updateServiceInfo = function(data, success, error) {
+    doPut("service", data, success, error);
   };
 
   //--------------------------------------------------------------------------

@@ -6,12 +6,12 @@ import java.util.List;
 public interface CloudSyncService {
 
     // -----------------------------------------------------------------------
-    //                            Configuration
+    //                             Service Info
     // -----------------------------------------------------------------------
 
-    Configuration getConfiguration();
+    ServiceInfo getServiceInfo();
 
-    Configuration updateConfiguration(Configuration configuration);
+    ServiceInfo updateServiceInfo(ServiceInfo serviceInfo);
 
     // -----------------------------------------------------------------------
     //                                Users

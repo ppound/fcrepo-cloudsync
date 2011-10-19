@@ -7,6 +7,9 @@ public class User {
 
     private String id;
     private String name;
+    private String password;
+    private Boolean isAdmin;
+    private Boolean isEnabled;
 
     public String getId() {
         return id;
@@ -23,4 +26,29 @@ public class User {
     public void setName(String name) {
         this.name = name;
     }
+    
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+    
+    public Boolean isAdmin() {
+        return isAdmin;
+    }
+    
+    public void setAdmin(Boolean isAdmin) {
+        this.isAdmin = isAdmin;
+    }
+
+    public Boolean isEnabled() {
+        return isEnabled;
+    }
+
+    public void setEnabled(Boolean isEnabled) {
+        this.isEnabled = isEnabled;
+    }
+
 }

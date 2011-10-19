@@ -2,9 +2,6 @@ package com.github.cwilper.fcrepo.cloudsync.api;
 
 public class ResourceInUseException extends Exception {
 
-    /**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
 
 	public ResourceInUseException(String message) {

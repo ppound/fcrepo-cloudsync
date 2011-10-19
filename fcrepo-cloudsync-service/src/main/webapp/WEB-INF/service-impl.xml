@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+       xmlns:security="http://www.springframework.org/schema/security"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-3.0.xsd">
 
   <bean id="serviceImpl"
         class="com.github.cwilper.fcrepo.cloudsync.service.CloudSyncServiceImpl">
@@ -23,5 +25,20 @@
     <property name="skipSSLHostnameVerification" value="true"/>
     <property name="skipSSLTrustCheck" value="true"/>
   </bean>
+
+  <security:http auto-config="true">
+    <security:intercept-url pattern="/static/**" filters="none"/>
+    <security:intercept-url pattern="/login*" filters="none"/>
+    <security:intercept-url pattern="/api/rest/service*" filters="none"/>
+    <security:intercept-url pattern="/**" access="ROLE_USER"/>
+    <security:form-login login-page="/login"/>
+  </security:http>
+
+  <security:authentication-manager>
+    <security:authentication-provider>
+      <security:password-encoder hash="sha"/>
+      <security:jdbc-user-service data-source-ref="dataSource"/>
+    </security:authentication-provider>
+  </security:authentication-manager>
 
 </beans>

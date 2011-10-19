@@ -1,7 +1,22 @@
 package com.github.cwilper.fcrepo.cloudsync.service;
 
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.util.List;
+
+import javax.annotation.PreDestroy;
+import javax.sql.DataSource;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+
 import com.github.cwilper.fcrepo.cloudsync.api.CloudSyncService;
-import com.github.cwilper.fcrepo.cloudsync.api.Configuration;
+import com.github.cwilper.fcrepo.cloudsync.api.ServiceInfo;
 import com.github.cwilper.fcrepo.cloudsync.api.NameConflictException;
 import com.github.cwilper.fcrepo.cloudsync.api.ObjectInfo;
 import com.github.cwilper.fcrepo.cloudsync.api.ObjectSet;
@@ -15,7 +30,7 @@ import com.github.cwilper.fcrepo.cloudsync.api.Task;
 import com.github.cwilper.fcrepo.cloudsync.api.TaskLog;
 import com.github.cwilper.fcrepo.cloudsync.api.User;
 import com.github.cwilper.fcrepo.cloudsync.service.backend.TaskManager;
-import com.github.cwilper.fcrepo.cloudsync.service.dao.ConfigurationDao;
+import com.github.cwilper.fcrepo.cloudsync.service.dao.ServiceInfoDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.DuraCloudDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.ObjectSetDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.ObjectStoreDao;
@@ -24,19 +39,6 @@ import com.github.cwilper.fcrepo.cloudsync.service.dao.TaskDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.TaskLogDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.UserDao;
 import com.github.cwilper.fcrepo.httpclient.HttpClientConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.DuplicateKeyException;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
-
-import javax.annotation.PreDestroy;
-import javax.sql.DataSource;
-import java.io.FileNotFoundException;
-import java.io.InputStream;
-import java.util.List;
 
 public class CloudSyncServiceImpl implements CloudSyncService {
 
@@ -44,7 +46,7 @@ public class CloudSyncServiceImpl implements CloudSyncService {
 
     private final JdbcTemplate db;
 
-    private final ConfigurationDao configurationDao;
+    private final ServiceInfoDao serviceInfoDao;
     private final UserDao userDao;
     private final TaskDao taskDao;
     private final ObjectSetDao objectSetDao;
@@ -61,8 +63,8 @@ public class CloudSyncServiceImpl implements CloudSyncService {
         db = new JdbcTemplate(dataSource);
         TransactionTemplate tt = new TransactionTemplate(txMan);
 
-        configurationDao = new ConfigurationDao(db);
-        userDao = new UserDao(db);
+        userDao = new UserDao(db, tt);
+        serviceInfoDao = new ServiceInfoDao(db, userDao);
         objectSetDao = new ObjectSetDao(db);
         objectStoreDao = new ObjectStoreDao(db);
         taskDao = new TaskDao(db, tt, objectSetDao, objectStoreDao);
@@ -70,7 +72,7 @@ public class CloudSyncServiceImpl implements CloudSyncService {
         taskLogDao = new TaskLogDao(db);
         duraCloudDao = new DuraCloudDao();
 
-        if (db.queryForInt("select count(*) from sys.systables where tablename = 'CLOUDSYNC'") == 0) {
+        if (db.queryForInt("SELECT COUNT(*) FROM sys.systables WHERE tablename = 'CLOUDSYNC'") == 0) {
             initDb();
         }
         logger.info("Service initialization complete. Ready to handle requests.");
@@ -88,7 +90,7 @@ public class CloudSyncServiceImpl implements CloudSyncService {
         logger.info("First run detected. Creating database tables.");
         db.execute("create table CloudSync(schemaVersion int)");
         db.update("insert into CloudSync values (1)");
-        configurationDao.initDb();
+        serviceInfoDao.initDb();
         userDao.initDb();
         objectSetDao.initDb();
         objectStoreDao.initDb();
@@ -98,17 +100,17 @@ public class CloudSyncServiceImpl implements CloudSyncService {
     }
 
     // -----------------------------------------------------------------------
-    //                            Configuration
+    //                             ServiceInfo
     // -----------------------------------------------------------------------
 
     @Override
-    public Configuration getConfiguration() {
-        return configurationDao.getConfiguration();
+    public ServiceInfo getServiceInfo() {
+        return serviceInfoDao.getServiceInfo();
     }
 
     @Override
-    public Configuration updateConfiguration(Configuration configuration) {
-        return configurationDao.updateConfiguration(configuration);
+    public ServiceInfo updateServiceInfo(ServiceInfo serviceInfo) {
+        return serviceInfoDao.updateServiceInfo(serviceInfo);
     }
 
     // -----------------------------------------------------------------------
