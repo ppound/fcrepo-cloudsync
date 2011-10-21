@@ -1,19 +1,16 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
+
 <head>
-
 <title>Fedora CloudSync: Login</title>
-
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-
-<link rel="shortcut icon" href="static/favicon.ico"/>
-<link rel="stylesheet" type="text/css" href="static/style.css"/>
-<link rel="stylesheet" type="text/css" href="static/jquery-ui-1.8.12.custom.css"/>
-
-<script type="text/javascript" src="static/jquery-1.5.2.min.js"></script>
-<script type="text/javascript" src="static/jquery-ui-1.8.12.custom.min.js"></script>
-<script type="text/javascript" src="static/json2.js"></script>
-<script type="text/javascript" src="static/cloudsync-client.js"></script>
+<link rel="shortcut icon" href="images/favicon.ico"/>
+<link rel="stylesheet" type="text/css" href="css/style.css"/>
+<link rel="stylesheet" type="text/css" href="css/Aristo/Aristo.css"/>
+<script type="text/javascript" src="js/jquery-1.6.4.min.js"></script>
+<script type="text/javascript" src="js/jquery-ui-1.8.16.custom.min.js"></script>
+<script type="text/javascript" src="js/json2.js"></script>
+<script type="text/javascript" src="js/cloudsync-client.js"></script>
 <script type="text/javascript"><!--
 
 var restBaseUrl = document.location.href + "/../api/rest/";
@@ -69,21 +66,19 @@ $(function() {
   });  
   
 });
-
 //--></script>
-
 </head>
 
 <body bgcolor="#333333">
 
 <form name='f' action='j_spring_security_check' method='POST'>
 <center>
-<p></p>
-<p></p>
+<table border="0" cellpadding="0" cellspacing="15"><tr><td bgcolor="#ffffff" style="padding: 15px;">
 <div id="login">
-  <p></p>
   <table bgcolor="#ffffff" cellpadding="10">
-    <tr><td align="middle"><img src="static/logo.png"/></td></tr>
+    <tr><td align="middle">
+    <img src="images/logo.png"/>
+    </td></tr>
     <tr><td align="middle">
       <table cellpadding="5" style="font-size: 16px;">
         <tr><td>Username</td><td><input type='text' name='j_username' value=''></td></tr>
@@ -94,9 +89,6 @@ $(function() {
       <button id="button-login" onclick="document.f.submit();">Login &gt;</button>
     </td></tr>
   </table>
-  <p id="versionInfo" style="color: #666666">
-    ..
-  </p>
 </div>
 </center>
 </form>
@@ -105,8 +97,8 @@ $(function() {
   <table>
     <tr>
       <td colspan="2">
-        Before anyone can login, you'll need<br/>
-        to create an administrative account.
+        Before anyone can login, you'll need to create<br/>
+        an administrative account.
         <p/>
       </td>
     </tr>
@@ -125,5 +117,9 @@ $(function() {
   </table>
 </div>
 
+</td></tr></table>
+  <p id="versionInfo" style="color: #666666">
+    ..
+  </p>
 </body>
 </html>

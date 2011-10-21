@@ -27,7 +27,9 @@ http://www.springframework.org/schema/security http://www.springframework.org/sc
   </bean>
 
   <security:http auto-config="true">
-    <security:intercept-url pattern="/static/**" filters="none"/>
+    <security:intercept-url pattern="/css/**" filters="none"/>
+    <security:intercept-url pattern="/images/**" filters="none"/>
+    <security:intercept-url pattern="/js/**" filters="none"/>
     <security:intercept-url pattern="/login*" filters="none"/>
     <security:intercept-url pattern="/api/rest/service*" filters="none"/>
     <security:intercept-url pattern="/**" access="ROLE_USER"/>

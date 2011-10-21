@@ -1,27 +1,25 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+
 <head>
-
 <title>Fedora CloudSync</title>
-
 <meta charset="UTF-8"/>
 <meta name="application-name" content="Fedora CloudSync"/>
-
-<link rel="shortcut icon" href="static/favicon.ico"/>
-<link rel="stylesheet" type="text/css" href="static/style.css"/>
-<link rel="stylesheet" type="text/css" href="static/jquery-ui-1.8.12.custom.css"/>
-
-<script type="text/javascript" src="static/jquery-1.5.2.min.js"></script>
-<script type="text/javascript" src="static/jquery-ui-1.8.12.custom.min.js"></script>
-<script type="text/javascript" src="static/json2.js"></script>
-<script type="text/javascript" src="static/cloudsync-client.js"></script>
-<script type="text/javascript" src="static/cloudsync-ui.js"></script>
-
+<link rel="shortcut icon" href="images/favicon.ico"/>
+<link rel="stylesheet" type="text/css" href="css/style.css"/>
+<link rel="stylesheet" type="text/css" href="css/Aristo/Aristo.css"/>
+<script type="text/javascript" src="js/jquery-1.6.4.min.js"></script>
+<script type="text/javascript" src="js/jquery-ui-1.8.16.custom.min.js"></script>
+<script type="text/javascript" src="js/json2.js"></script>
+<script type="text/javascript" src="js/cloudsync-client.js"></script>
+<script type="text/javascript" src="js/cloudsync-ui.js"></script>
 </head>
 
-<body>
+<body bgcolor="#333333">
+<table border="0" cellpadding="0" cellspacing="15" width="100%">
+<tr><td bgcolor="#ffffff" style="padding: 15px;">
 <div id="title">
-  <img src="static/logo.png" onClick="showAbout();" alt="Fedora CloudSync"/>
+  <img src="images/logo.png" onClick="showAbout();" alt="Fedora CloudSync"/>
 </div>
 
 <div id="logout">
@@ -132,9 +130,6 @@
 
 <div class="ui-helper-hidden" id="dialog-NewTask" title="New Task">
   <p>
-    What kind of Task do you want to add?
-  </p>
-  <p>
     <button id="button-NewListTask">List Objects</button>
   </p>
   <p>
@@ -227,9 +222,6 @@
 
 <div class="ui-helper-hidden" id="dialog-NewSet" title="New Set">
   <p>
-    What kind of Object Set do you want to add?
-  </p>
-  <p>
     <button id="button-NewPidPattern">PID Pattern</button>
   </p>
   <p>
@@ -293,9 +285,6 @@
 <!-- Stores -->
 
 <div class="ui-helper-hidden" id="dialog-NewStore" title="New Store">
-  <p>
-    What kind of Object Store do you want to add?
-  </p>
   <p>
     <button id="button-NewDuraCloudStore">DuraCloud-based</button>
   </p>
@@ -465,5 +454,6 @@
   </p>
 </div>
 
+</td></tr></table>
 </body>
 </html>
