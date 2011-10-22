@@ -32,7 +32,7 @@ function CloudSyncClient(baseURL) {
   };
 
   this.updateServiceInfo = function(data, success, error) {
-    doPut("service", data, success, error);
+    doPatch("service", data, success, error);
   };
 
   //--------------------------------------------------------------------------
@@ -56,7 +56,7 @@ function CloudSyncClient(baseURL) {
   };
 
   this.updateUser = function(id, data, success, error) {
-    doPut("users/" + id, data, success, error);
+    doPatch("users/" + id, data, success, error);
   };
 
   this.deleteUser = function(id, success, error) {
@@ -80,7 +80,7 @@ function CloudSyncClient(baseURL) {
   };
 
   this.updateTask = function(id, data, success, error) {
-    doPut("tasks/" + id, data, success, error);
+    doPatch("tasks/" + id, data, success, error);
   };
 
   this.deleteTask = function(id, success, error) {
@@ -104,7 +104,7 @@ function CloudSyncClient(baseURL) {
   };
 
   this.updateObjectSet = function(id, data, success, error) {
-    doPut("objectsets/" + id, data, success, error);
+    doPatch("objectsets/" + id, data, success, error);
   };
 
   this.deleteObjectSet = function(id, success, error) {
@@ -132,7 +132,7 @@ function CloudSyncClient(baseURL) {
   };
 
   this.updateObjectStore = function(id, data, success, error) {
-    doPut("objectstores/" + id, data, success, error);
+    doPatch("objectstores/" + id, data, success, error);
   };
 
   this.deleteObjectStore = function(id, success, error) {
@@ -204,11 +204,11 @@ function CloudSyncClient(baseURL) {
   }
 
   function doPost(path, data, success, error) {
-    doPostOrPut("POST", path, data, success, error);
+    doPostOrPatch("POST", path, data, success, error);
   }
 
-  function doPut(path, data, success, error) {
-    doPostOrPut("PUT", path, data, success, error);
+  function doPatch(path, data, success, error) {
+    doPostOrPatch("PATCH", path, data, success, error);
   }
 
   function doDelete(path, success, error) {
@@ -232,7 +232,7 @@ function CloudSyncClient(baseURL) {
     })
   }
 
-  function doPostOrPut(method, path, data, success, error) {
+  function doPostOrPatch(method, path, data, success, error) {
     var url = baseURL + path;
     //alert("Request:\n\n" + method + " " + url + "\n\n" + JSON.stringify(data));
     var errorCallback = error;
