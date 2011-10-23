@@ -13,58 +13,54 @@
 <script type="text/javascript" src="js/cloudsync-client.js"></script>
 <script type="text/javascript"><!--
 
-var restBaseUrl = document.location.href + "/../api/rest/";
-var service = new CloudSyncClient(restBaseUrl);
+var serviceUri = document.location.href + "/../api/rest/service";
+var service = new CloudSyncClient(serviceUri);
 
 $(function() {
   $("#button-login").button();
   document.f.j_username.focus();
 
-  service.getServiceInfo(function(data) {
-    $("#versionInfo").html("CloudSync v" + data.service.version);
-    if (data.service.initialized == false) {
-      $("#dialog-initialize").dialog({
-          autoOpen: false,
-          modal: true,
-          width: 'auto',
-          show: 'fade',
-          hide: 'fade'
-      });
-      $("#dialog-initialize").dialog("option", "buttons", {
-        "Create Account": function() {
-          var username = $("#Initialize-username").val();
-          var pass1 = $("#Initialize-password1").val();
-          var pass2 = $("#Initialize-password2").val();
-          if (username != "" && pass1 != "" && pass1 == pass2) {
-            var serviceData = { service: {
-              "initialAdminUsername" : username,
-              "initialAdminPassword" : pass1
-            }};
-            service.updateServiceInfo(serviceData,
-              function() {
-                $("#dialog-initialize").dialog("close");
-                document.f.j_username.focus();
-              },
-              function(httpRequest, method, url, textStatus) {
-                alert("Account Creation Failed: " + textStatus);
-              }
-            );
-          } else if (username == "") {
-              alert("Username cannot be blank!");
-          } else if (pass1 == "") {
-              alert("Password cannot be blank!");
-          } else {
-              alert("Passwords do not match!");
-          }
+  $("#versionInfo").html("CloudSync v" + service.info.version);
+  if (service.info.initialized == false) {
+
+    $("#dialog-initialize").dialog({
+        autoOpen: false,
+        modal: true,
+        width: 'auto',
+        show: 'fade',
+        hide: 'fade'
+    });
+
+    $("#dialog-initialize").dialog("option", "buttons", {
+      "Create Account": function() {
+        var username = $("#Initialize-username").val();
+        var pass1 = $("#Initialize-password1").val();
+        var pass2 = $("#Initialize-password2").val();
+        if (username != "" && pass1 != "" && pass1 == pass2) {
+          var initData = { serviceInit: {
+            "initialAdminUsername" : username,
+            "initialAdminPassword" : pass1
+          }};
+          service.initialize(initData,
+            function() {
+              $("#dialog-initialize").dialog("close");
+              document.f.j_username.focus();
+            },
+            function(httpRequest, method, url, textStatus) {
+              alert("Account Creation Failed: " + textStatus);
+            }
+          );
+        } else if (username == "") {
+            alert("Username cannot be blank!");
+        } else if (pass1 == "") {
+            alert("Password cannot be blank!");
+        } else {
+            alert("Passwords do not match!");
         }
-      });
-      $("#dialog-initialize").dialog("open");
-    }
-  },
-  function(httpRequest, method, url, textStatus, errorThrown) {
-      alert("Error getting " + url + " : " + textStatus);
-  });  
-  
+      }
+    });
+    $("#dialog-initialize").dialog("open");
+  }
 });
 //--></script>
 </head>

@@ -1,9 +1,11 @@
 package com.github.cwilper.fcrepo.cloudsync.api;
 
 import javax.xml.bind.annotation.XmlRootElement;
+
+import java.net.URI;
 import java.util.Date;
 
-@XmlRootElement(name="tasklog")
+@XmlRootElement(name="taskLog")
 public class TaskLog {
 
     public static final String INCOMPLETE = "Incomplete";
@@ -12,10 +14,13 @@ public class TaskLog {
     public static final String CANCELED = "Canceled";
 
     private String id;
+    private URI uri;
     private String taskId;
+    private URI taskUri;
     private String resultType;
     private Date startDate;
     private Date finishDate;
+    private URI contentUri;
 
     public String getId() {
         return id;
@@ -25,12 +30,28 @@ public class TaskLog {
         this.id = id;
     }
 
+    public URI getUri() {
+        return uri;
+    }
+    
+    public void setUri(URI uri) {
+        this.uri = uri;
+    }
+    
     public String getTaskId() {
         return taskId;
     }
 
     public void setTaskId(String taskId) {
         this.taskId = taskId;
+    }
+    
+    public URI getTaskUri() {
+        return taskUri;
+    }
+    
+    public void setTaskUri(URI taskUri) {
+        this.taskUri = taskUri;
     }
 
     public String getResultType() {
@@ -55,5 +76,13 @@ public class TaskLog {
 
     public void setFinishDate(Date finishDate) {
         this.finishDate = finishDate;
+    }
+    
+    public URI getContentUri() {
+        return contentUri;
+    }
+    
+    public void setContentUri(URI contentUri) {
+        this.contentUri = contentUri;
     }
 }

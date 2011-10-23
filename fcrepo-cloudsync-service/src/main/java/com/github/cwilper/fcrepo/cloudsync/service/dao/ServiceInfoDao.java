@@ -7,15 +7,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 
 import com.github.cwilper.fcrepo.cloudsync.api.ServiceInfo;
-import com.github.cwilper.fcrepo.cloudsync.api.User;
 
 public class ServiceInfoDao extends AbstractDao {
     
-    private final UserDao userDao;
-
     public ServiceInfoDao(JdbcTemplate db, UserDao userDao) {
         super(db);
-        this.userDao = userDao;
     }
 
     @Override
@@ -40,30 +36,8 @@ public class ServiceInfoDao extends AbstractDao {
                 });
     }
 
-    public ServiceInfo updateServiceInfo(ServiceInfo newInfo) {
-        ServiceInfo currentInfo = getServiceInfo();
-        if (currentInfo.isInitialized()) {
-            throw new RuntimeException("CloudSync is already initialized.");
-        }
-        String name = newInfo.getInitialAdminUsername();
-        if (name == null || name.length() == 0) {
-            throw new RuntimeException("initialAdminUsername must be non-empty.");
-        }
-        String pass = newInfo.getInitialAdminPassword();
-        if (pass == null || pass.length() == 0) {
-            throw new RuntimeException("initialAdminPassword must be non-empty.");
-        }
-        User admin = new User();
-        admin.setName(name);
-        admin.setPassword(pass);
-        admin.setAdmin(true);
-        admin.setEnabled(true);
-        userDao.createUser(admin);
+    public void setInitialized() {
         db.update("UPDATE ServiceInfo SET initialized = true");
-        newInfo.setBuildDate(currentInfo.getBuildDate());
-        newInfo.setVersion(currentInfo.getVersion());
-        newInfo.setInitialized(true);
-        return newInfo;
     }
 
 }

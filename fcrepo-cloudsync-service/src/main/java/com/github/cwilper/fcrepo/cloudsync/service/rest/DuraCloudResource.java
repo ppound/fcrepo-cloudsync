@@ -1,28 +1,42 @@
 package com.github.cwilper.fcrepo.cloudsync.service.rest;
 
-import com.github.cwilper.fcrepo.cloudsync.api.CloudSyncService;
-import com.github.cwilper.fcrepo.cloudsync.api.ProviderAccount;
-import com.github.cwilper.fcrepo.cloudsync.api.Space;
+import java.util.List;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+
 import org.apache.cxf.jaxrs.model.wadl.Description;
 import org.apache.cxf.jaxrs.model.wadl.Descriptions;
 import org.apache.cxf.jaxrs.model.wadl.DocTarget;
 
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.QueryParam;
-import java.util.List;
+import com.github.cwilper.fcrepo.cloudsync.api.CloudSyncService;
+import com.github.cwilper.fcrepo.cloudsync.api.ProviderAccount;
+import com.github.cwilper.fcrepo.cloudsync.api.Space;
 
 @Path("duracloud")
 public class DuraCloudResource extends AbstractResource {
+    
+    public static final String PROVIDERACCOUNTS_JSON =
+            "application/vnd.fcrepo-cloudsync.provideraccounts+json";
+
+    public static final String PROVIDERACCOUNTS_XML =
+            "application/vnd.fcrepo-cloudsync.provideraccounts+xml";
+
+    public static final String SPACES_JSON =
+            "application/vnd.fcrepo-cloudsync.spaces+json";
+
+    public static final String SPACES_XML =
+            "application/vnd.fcrepo-cloudsync.spaces+xml";
 
     public DuraCloudResource(CloudSyncService service) {
         super(service);
     }
 
     @GET
-    @Path("/provideraccounts")
-    @Consumes({XML, JSON})
+    @Path("/providerAccounts")
+    @Produces({JSON, XML, PROVIDERACCOUNTS_JSON, PROVIDERACCOUNTS_XML})
     @Descriptions({
             @Description(value = "Lists the Storage Provider Accounts configured for a DuraCloud Instance", target = DocTarget.METHOD),
             @Description(value = STATUS_200_OK, target = DocTarget.RESPONSE)
@@ -36,7 +50,7 @@ public class DuraCloudResource extends AbstractResource {
 
     @GET
     @Path("/spaces")
-    @Consumes({XML, JSON})
+    @Produces({JSON, XML, SPACES_JSON, SPACES_XML})
     @Descriptions({
         @Description(value = "Lists the Spaces available within a Storage Provider Account on a DuraCloud Instance", target = DocTarget.METHOD),
         @Description(value = STATUS_200_OK, target = DocTarget.RESPONSE)

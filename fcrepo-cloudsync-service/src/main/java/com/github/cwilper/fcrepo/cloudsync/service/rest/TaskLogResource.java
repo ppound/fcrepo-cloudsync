@@ -1,25 +1,43 @@
 package com.github.cwilper.fcrepo.cloudsync.service.rest;
 
-import com.github.cwilper.fcrepo.cloudsync.api.CloudSyncService;
-import com.github.cwilper.fcrepo.cloudsync.api.ResourceInUseException;
-import com.github.cwilper.fcrepo.cloudsync.api.ResourceNotFoundException;
-import com.github.cwilper.fcrepo.cloudsync.api.TaskLog;
-import org.apache.cxf.jaxrs.model.wadl.Description;
-import org.apache.cxf.jaxrs.model.wadl.Descriptions;
-import org.apache.cxf.jaxrs.model.wadl.DocTarget;
+import java.io.InputStream;
+import java.net.URI;
+import java.util.List;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
-import java.io.InputStream;
-import java.util.List;
+import javax.ws.rs.core.UriInfo;
 
-@Path("tasklogs")
+import org.apache.cxf.jaxrs.model.wadl.Description;
+import org.apache.cxf.jaxrs.model.wadl.Descriptions;
+import org.apache.cxf.jaxrs.model.wadl.DocTarget;
+
+import com.github.cwilper.fcrepo.cloudsync.api.CloudSyncService;
+import com.github.cwilper.fcrepo.cloudsync.api.ResourceInUseException;
+import com.github.cwilper.fcrepo.cloudsync.api.ResourceNotFoundException;
+import com.github.cwilper.fcrepo.cloudsync.api.TaskLog;
+
+@Path("taskLogs")
 public class TaskLogResource extends AbstractResource {
+
+    public static final String TASKLOG_JSON =
+            "application/vnd.fcrepo-cloudsync.tasklog+json";
+
+    public static final String TASKLOG_XML =
+            "application/vnd.fcrepo-cloudsync.tasklog+xml";
+
+    public static final String TASKLOGS_JSON =
+            "application/vnd.fcrepo-cloudsync.tasklogs+json";
+
+    public static final String TASKLOGS_XML =
+            "application/vnd.fcrepo-cloudsync.tasklogs+xml";
 
     public TaskLogResource(CloudSyncService service) {
         super(service);
@@ -27,25 +45,34 @@ public class TaskLogResource extends AbstractResource {
 
     @GET
     @Path("/")
-    @Produces({XML, JSON})
+    @Produces({JSON, XML, TASKLOGS_JSON, TASKLOGS_XML})
     @Descriptions({
         @Description(value = "Lists all task logs", target = DocTarget.METHOD),
         @Description(value = STATUS_200_OK, target = DocTarget.RESPONSE)
     })
-    public List<TaskLog> listTaskLogs() {
-        return service.listTaskLogs();
+    public List<TaskLog> listTaskLogs(@Context UriInfo uriInfo,
+                                      @Context HttpServletRequest req) {
+        List<TaskLog> taskLogs = service.listTaskLogs();
+        for (TaskLog taskLog: taskLogs) {
+            setUris(uriInfo, req, taskLog);
+        }
+        return taskLogs;
     }
 
     @GET
     @Path("{id}")
-    @Produces({XML, JSON})
+    @Produces({JSON, XML, TASKLOG_JSON, TASKLOG_XML})
     @Descriptions({
             @Description(value = "Gets a task log", target = DocTarget.METHOD),
             @Description(value = STATUS_200_OK, target = DocTarget.RESPONSE)
     })
-    public TaskLog getTaskLog(@PathParam("id") String id) {
+    public TaskLog getTaskLog(@Context UriInfo uriInfo,
+                              @Context HttpServletRequest req,
+                              @PathParam("id") String id) {
         try {
-            return service.getTaskLog(id);
+            TaskLog taskLog = service.getTaskLog(id);
+            setUris(uriInfo, req, taskLog);
+            return taskLog;
         } catch (ResourceNotFoundException e) {
             throw new WebApplicationException(e, Response.Status.NOT_FOUND);
         }
@@ -79,5 +106,13 @@ public class TaskLogResource extends AbstractResource {
             throw new WebApplicationException(e, Response.Status.CONFLICT);
         }
     }
-
+    
+    private void setUris(UriInfo uriInfo, HttpServletRequest req, TaskLog taskLog) {
+        URI uri = URIMapper.getUri(uriInfo, req, "taskLogs/" + taskLog.getId());
+        taskLog.setUri(uri);
+        taskLog.setTaskUri(URIMapper.getUri(uriInfo, req, "tasks/" + taskLog.getTaskId()));
+        taskLog.setContentUri(URI.create(uri + "/content"));
+        taskLog.setId(null);
+        taskLog.setTaskId(null);
+    }
 }

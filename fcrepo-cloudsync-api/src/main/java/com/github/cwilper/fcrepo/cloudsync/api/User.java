@@ -1,11 +1,14 @@
 package com.github.cwilper.fcrepo.cloudsync.api;
 
+import java.net.URI;
+
 import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement(name="user")
 public class User {
 
     private String id;
+    private URI uri;
     private String name;
     private String password;
     private Boolean isAdmin;
@@ -17,6 +20,14 @@ public class User {
 
     public void setId(String id) {
         this.id = id;
+    }
+    
+    public URI getUri() {
+        return uri;
+    }
+    
+    public void setUri(URI uri) {
+        this.uri = uri;
     }
 
     public String getName() {

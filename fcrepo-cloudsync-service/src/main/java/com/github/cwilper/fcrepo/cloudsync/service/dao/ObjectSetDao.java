@@ -88,11 +88,6 @@ public class ObjectSetDao extends AbstractDao {
         return o;
     }
 
-    public ObjectSet updateObjectSet(String id, ObjectSet objectSet) {
-        // TODO: Implement me...which fields can be updated?
-        return objectSet;
-    }
-
     public void deleteObjectSet(String id) {
         db.update("DELETE FROM ObjectSets WHERE id = ?", Integer.parseInt(id));
     }

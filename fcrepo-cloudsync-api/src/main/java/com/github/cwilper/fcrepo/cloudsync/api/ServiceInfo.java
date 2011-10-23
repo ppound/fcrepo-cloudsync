@@ -1,5 +1,7 @@
 package com.github.cwilper.fcrepo.cloudsync.api;
 
+import java.net.URI;
+
 import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement(name="service")
@@ -8,9 +10,15 @@ public class ServiceInfo {
     private boolean isInitialized;
     private String version;
     private String buildDate;
-    private String initialAdminUsername;
-    private String initialAdminPassword;
-    
+    private URI currentUserUri;
+    private URI objectSetsUri;
+    private URI objectStoresUri;
+    private URI providerAccountsUri;
+    private URI spacesUri;
+    private URI taskLogsUri;
+    private URI tasksUri;
+    private URI usersUri;
+
     public boolean isInitialized() {
         return isInitialized;
     }
@@ -34,21 +42,69 @@ public class ServiceInfo {
     public void setBuildDate(String buildDate) {
         this.buildDate = buildDate;
     }
-
-    public String getInitialAdminUsername() {
-        return initialAdminUsername;
+    
+    public URI getCurrentUserUri() {
+        return currentUserUri;
+    }
+    
+    public void setCurrentUserUri(URI currentUserUri) {
+        this.currentUserUri = currentUserUri;
     }
 
-    public void setInitialAdminUsername(String initialAdminUsername) {
-        this.initialAdminUsername = initialAdminUsername;
+    public URI getObjectSetsUri() {
+        return objectSetsUri;
+    }
+    
+    public void setObjectSetsUri(URI objectSetsUri) {
+        this.objectSetsUri = objectSetsUri;
+    }
+    
+    public URI getObjectStoresUri() {
+        return objectStoresUri;
+    }
+    
+    public void setObjectStoresUri(URI objectStoresUri) {
+        this.objectStoresUri = objectStoresUri;
+    }
+    
+    public URI getProviderAccountsUri() {
+        return providerAccountsUri;
+    }
+    
+    public void setProviderAccountsUri(URI providerAccountsUri) {
+        this.providerAccountsUri = providerAccountsUri;
     }
 
-    public String getInitialAdminPassword() {
-        return initialAdminPassword;
+    public URI getSpacesUri() {
+        return spacesUri;
+    }
+    
+    public void setSpacesUri(URI spacesUri) {
+        this.spacesUri = spacesUri;
     }
 
-    public void setInitialAdminPassword(String initialAdminPassword) {
-        this.initialAdminPassword = initialAdminPassword;
+    public URI getTaskLogsUri() {
+        return taskLogsUri;
+    }
+    
+    public void setTaskLogsUri(URI taskLogsUri) {
+        this.taskLogsUri = taskLogsUri;
+    }
+    
+    public URI getTasksUri() {
+        return tasksUri;
+    }
+    
+    public void setTasksUri(URI tasksUri) {
+        this.tasksUri = tasksUri;
+    }
+    
+    public URI getUsersUri() {
+        return usersUri;
+    }
+    
+    public void setUsersUri(URI usersUri) {
+        this.usersUri = usersUri;
     }
 
 }

@@ -1,11 +1,9 @@
 package com.github.cwilper.fcrepo.cloudsync.service.dao;
 
-import com.github.cwilper.fcrepo.cloudsync.api.Task;
-import com.github.cwilper.fcrepo.cloudsync.service.backend.TaskRunner;
-import com.github.cwilper.fcrepo.cloudsync.service.util.StringUtil;
-import com.github.cwilper.fcrepo.httpclient.HttpClientConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.List;
+
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
@@ -15,13 +13,12 @@ import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.List;
+import com.github.cwilper.fcrepo.cloudsync.api.Task;
+import com.github.cwilper.fcrepo.cloudsync.service.backend.TaskRunner;
+import com.github.cwilper.fcrepo.cloudsync.service.util.StringUtil;
+import com.github.cwilper.fcrepo.httpclient.HttpClientConfig;
 
 public class TaskDao extends AbstractDao {
-
-    private static final Logger logger = LoggerFactory.getLogger(TaskDao.class);
 
     private static final String CREATE_DDL =
           "CREATE TABLE Tasks (\n"
@@ -125,11 +122,13 @@ public class TaskDao extends AbstractDao {
                             task.getSchedule(),
                             task.getData());
                     Integer taskId = Integer.parseInt(id);
-                    for (Integer setId: runner.getRelatedSetIds()) {
-                        db.update(INSERT_SQL2, taskId, setId);
+                    for (String setId: runner.getRelatedSetIds()) {
+                        db.update(INSERT_SQL2, taskId,
+                                Integer.parseInt(setId));
                     }
-                    for (Integer storeId: runner.getRelatedStoreIds()) {
-                        db.update(INSERT_SQL3, taskId, storeId);
+                    for (String storeId: runner.getRelatedStoreIds()) {
+                        db.update(INSERT_SQL3, taskId, 
+                                Integer.parseInt(storeId));
                     }
                     success = true;
                     return id;
@@ -274,11 +273,11 @@ public class TaskDao extends AbstractDao {
                             taskId);
                     db.update("DELETE FROM TaskSetDeps WHERE taskId = ?", taskId);
                     db.update("DELETE FROM TaskStoreDeps WHERE taskId = ?", taskId);
-                    for (Integer setId: runner.getRelatedSetIds()) {
-                        db.update(INSERT_SQL2, taskId, setId);
+                    for (String setId: runner.getRelatedSetIds()) {
+                        db.update(INSERT_SQL2, taskId, Integer.parseInt(setId));
                     }
-                    for (Integer storeId: runner.getRelatedStoreIds()) {
-                        db.update(INSERT_SQL3, taskId, storeId);
+                    for (String storeId: runner.getRelatedStoreIds()) {
+                        db.update(INSERT_SQL3, taskId, Integer.parseInt(storeId));
                     }
                     success = true;
                 } finally {

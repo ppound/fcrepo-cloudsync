@@ -24,8 +24,6 @@ public abstract class TaskRunner extends Thread {
     protected final PrintWriter logWriter;
     protected final TaskCompletionListener completionListener;
 
-    protected final Schedule schedule;
-
     protected boolean pauseRequested;
     protected boolean resumeRequested;
     protected boolean cancelRequested;
@@ -42,11 +40,6 @@ public abstract class TaskRunner extends Thread {
         this.objectStoreDao = objectStoreDao;
         this.logWriter = logWriter;
         this.completionListener = completionListener;
-        if (task.getSchedule() != null) {
-            this.schedule = new Schedule(task.getSchedule());
-        } else {
-            this.schedule = null;
-        }
     }
 
     public static final TaskRunner getInstance(Task task,
@@ -127,10 +120,6 @@ public abstract class TaskRunner extends Thread {
         return task;
     }
 
-    public Schedule getSchedule() {
-        return schedule;
-    }
-
     public void requestPause() {
         pauseRequested = true;
         resumeRequested = false;
@@ -149,7 +138,7 @@ public abstract class TaskRunner extends Thread {
         cancelRequested = true;
     }
 
-    public abstract Set<Integer> getRelatedSetIds();
+    public abstract Set<String> getRelatedSetIds();
 
-    public abstract Set<Integer> getRelatedStoreIds();
+    public abstract Set<String> getRelatedStoreIds();
 }

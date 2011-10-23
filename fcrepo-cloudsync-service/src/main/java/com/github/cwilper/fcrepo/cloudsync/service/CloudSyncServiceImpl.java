@@ -15,26 +15,25 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.github.cwilper.fcrepo.cloudsync.api.AlreadyInitializedException;
 import com.github.cwilper.fcrepo.cloudsync.api.CloudSyncService;
-import com.github.cwilper.fcrepo.cloudsync.api.ServiceInfo;
 import com.github.cwilper.fcrepo.cloudsync.api.NameConflictException;
-import com.github.cwilper.fcrepo.cloudsync.api.ObjectInfo;
 import com.github.cwilper.fcrepo.cloudsync.api.ObjectSet;
 import com.github.cwilper.fcrepo.cloudsync.api.ObjectStore;
 import com.github.cwilper.fcrepo.cloudsync.api.ProviderAccount;
 import com.github.cwilper.fcrepo.cloudsync.api.ResourceInUseException;
 import com.github.cwilper.fcrepo.cloudsync.api.ResourceNotFoundException;
+import com.github.cwilper.fcrepo.cloudsync.api.ServiceInfo;
+import com.github.cwilper.fcrepo.cloudsync.api.ServiceInit;
 import com.github.cwilper.fcrepo.cloudsync.api.Space;
-import com.github.cwilper.fcrepo.cloudsync.api.SystemLog;
 import com.github.cwilper.fcrepo.cloudsync.api.Task;
 import com.github.cwilper.fcrepo.cloudsync.api.TaskLog;
 import com.github.cwilper.fcrepo.cloudsync.api.User;
 import com.github.cwilper.fcrepo.cloudsync.service.backend.TaskManager;
-import com.github.cwilper.fcrepo.cloudsync.service.dao.ServiceInfoDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.DuraCloudDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.ObjectSetDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.ObjectStoreDao;
-import com.github.cwilper.fcrepo.cloudsync.service.dao.SystemLogDao;
+import com.github.cwilper.fcrepo.cloudsync.service.dao.ServiceInfoDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.TaskDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.TaskLogDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.UserDao;
@@ -51,7 +50,6 @@ public class CloudSyncServiceImpl implements CloudSyncService {
     private final TaskDao taskDao;
     private final ObjectSetDao objectSetDao;
     private final ObjectStoreDao objectStoreDao;
-    private final SystemLogDao systemLogDao;
     private final TaskLogDao taskLogDao;
     private final DuraCloudDao duraCloudDao;
 
@@ -68,14 +66,13 @@ public class CloudSyncServiceImpl implements CloudSyncService {
         objectSetDao = new ObjectSetDao(db);
         objectStoreDao = new ObjectStoreDao(db);
         taskDao = new TaskDao(db, tt, objectSetDao, objectStoreDao);
-        systemLogDao = new SystemLogDao(db);
         taskLogDao = new TaskLogDao(db);
         duraCloudDao = new DuraCloudDao();
 
         if (db.queryForInt("SELECT COUNT(*) FROM sys.systables WHERE tablename = 'CLOUDSYNC'") == 0) {
             initDb();
         }
-        logger.info("Service initialization complete. Ready to handle requests.");
+        logger.info("Service startup complete. Ready to handle requests.");
 
         taskManager = new TaskManager(taskDao, taskLogDao, objectSetDao, objectStoreDao, httpClientConfig);
         taskManager.start();
@@ -95,7 +92,6 @@ public class CloudSyncServiceImpl implements CloudSyncService {
         objectSetDao.initDb();
         objectStoreDao.initDb();
         taskDao.initDb();
-        systemLogDao.initDb();
         taskLogDao.initDb();
     }
 
@@ -109,8 +105,19 @@ public class CloudSyncServiceImpl implements CloudSyncService {
     }
 
     @Override
-    public ServiceInfo updateServiceInfo(ServiceInfo serviceInfo) {
-        return serviceInfoDao.updateServiceInfo(serviceInfo);
+    public ServiceInfo initialize(ServiceInit serviceInit)
+            throws AlreadyInitializedException {
+        if (getServiceInfo().isInitialized()) {
+            throw new AlreadyInitializedException();
+        }
+        User user = new User();
+        user.setAdmin(true);
+        user.setEnabled(true);
+        user.setName(serviceInit.getInitialAdminUsername());
+        user.setPassword(serviceInit.getInitialAdminPassword());
+        userDao.createUser(user);
+        serviceInfoDao.setInitialized();
+        return getServiceInfo();
     }
 
     // -----------------------------------------------------------------------
@@ -251,20 +258,6 @@ public class CloudSyncServiceImpl implements CloudSyncService {
     }
 
     @Override
-    public ObjectSet updateObjectSet(String id, ObjectSet objectSet)
-            throws ResourceNotFoundException, NameConflictException {
-        try {
-            ObjectSet result = objectSetDao.updateObjectSet(id, objectSet);
-            if (result == null) {
-                throw new ResourceNotFoundException("No such object set: " + id);
-            }
-            return result;
-        } catch (DuplicateKeyException e) {
-            throw new NameConflictException("Object set name is already in use", e);
-        }
-    }
-
-    @Override
     public void deleteObjectSet(String id) throws ResourceInUseException {
         try {
             objectSetDao.deleteObjectSet(id);
@@ -302,64 +295,12 @@ public class CloudSyncServiceImpl implements CloudSyncService {
     }
 
     @Override
-    public List<ObjectInfo> queryObjectStore(String id, String set, long limit, long offset) {
-        return objectStoreDao.queryObjectStore(id, set, limit, offset);
-    }
-
-    @Override
-    public ObjectStore updateObjectStore(String id, ObjectStore objectStore)
-            throws ResourceNotFoundException, NameConflictException {
-        try {
-            ObjectStore result = objectStoreDao.updateObjectStore(id, objectStore);
-            if (result == null) {
-                throw new ResourceNotFoundException("No such object store: " + id);
-            }
-            return result;
-        } catch (DuplicateKeyException e) {
-            throw new NameConflictException("Object store name is already in use", e);
-        }
-    }
-
-    @Override
     public void deleteObjectStore(String id) throws ResourceInUseException {
         try {
             objectStoreDao.deleteObjectStore(id);
         } catch (DataIntegrityViolationException e) {
             throw new ResourceInUseException("Object store is currently being used by a task", e);
         }
-    }
-
-    // -----------------------------------------------------------------------
-    //                             System Logs
-    // -----------------------------------------------------------------------
-
-    @Override
-    public List<SystemLog> listSystemLogs() {
-        return systemLogDao.listSystemLogs();
-    }
-
-    @Override
-    public SystemLog getSystemLog(String id) throws ResourceNotFoundException {
-        SystemLog result = systemLogDao.getSystemLog(id);
-        if (result == null) {
-            throw new ResourceNotFoundException("No such system log: " + id);
-        }
-        return result;
-    }
-
-    @Override
-    public InputStream getSystemLogContent(String id) throws ResourceNotFoundException {
-        try {
-            return systemLogDao.getSystemLogContent(id);
-        } catch (FileNotFoundException e) {
-            throw new ResourceNotFoundException("No such system log: " + id, e);
-        }
-    }
-
-    @Override
-    public void deleteSystemLog(String id) {
-        // TODO: throw ResourceInUseException if id = latest system log (still being written)
-        systemLogDao.deleteSystemLog(id);
     }
 
     // -----------------------------------------------------------------------

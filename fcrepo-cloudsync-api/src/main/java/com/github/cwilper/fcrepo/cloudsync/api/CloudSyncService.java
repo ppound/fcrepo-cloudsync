@@ -6,12 +6,12 @@ import java.util.List;
 public interface CloudSyncService {
 
     // -----------------------------------------------------------------------
-    //                             Service Info
+    //                               Service
     // -----------------------------------------------------------------------
 
     ServiceInfo getServiceInfo();
 
-    ServiceInfo updateServiceInfo(ServiceInfo serviceInfo);
+    ServiceInfo initialize(ServiceInit serviceInit) throws AlreadyInitializedException;
 
     // -----------------------------------------------------------------------
     //                                Users
@@ -53,8 +53,6 @@ public interface CloudSyncService {
 
     ObjectSet getObjectSet(String id) throws ResourceNotFoundException;
 
-    ObjectSet updateObjectSet(String id, ObjectSet objectSet) throws ResourceNotFoundException, NameConflictException;
-
     void deleteObjectSet(String id) throws ResourceInUseException;
 
     // -----------------------------------------------------------------------
@@ -67,23 +65,7 @@ public interface CloudSyncService {
 
     ObjectStore getObjectStore(String id) throws ResourceNotFoundException;
 
-    List<ObjectInfo> queryObjectStore(String id, String set, long limit, long offset);
-
-    ObjectStore updateObjectStore(String id, ObjectStore objectStore) throws ResourceNotFoundException, NameConflictException;
-
     void deleteObjectStore(String id) throws ResourceInUseException;
-
-    // -----------------------------------------------------------------------
-    //                             System Logs
-    // -----------------------------------------------------------------------
-
-    List<SystemLog> listSystemLogs();
-
-    SystemLog getSystemLog(String id) throws ResourceNotFoundException;
-
-    InputStream getSystemLogContent(String id) throws ResourceNotFoundException;
-
-    void deleteSystemLog(String id) throws ResourceInUseException;
 
     // -----------------------------------------------------------------------
     //                              Task Logs

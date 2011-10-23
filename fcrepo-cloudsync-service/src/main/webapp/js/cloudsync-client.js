@@ -1,9 +1,10 @@
 // Javascript Client Library for Fedora CloudSync.
 // Requires jQuery 1.5+ and http://www.JSON.org/json2.js
 //
-// All calls are asynchronous and accept a "success" callback function.
-// If the call returns JSON data, it will be deserialized and provided
-// as the first argument to the callback.
+// All calls are asynchronous by default but can made invoke synchronously
+// via an optional parameter. In either case, the caller must provide a
+// "success" callback function that will be invoked (possibly with pre-parsed
+// JSON data) upon success.
 //
 // When an unexpected response (a non-20x, etc) occurs, the default behavior
 // is to put up an alert explaining the problem, or in certain cases,
@@ -11,241 +12,243 @@
 // caller may provide an "error" callback to be used instead. The signature
 // should match that of the private defaultErrorCallback method below.
 //
-// The constructor creates a CloudSyncClient, against which all REST calls can
-// be made. The baseURL should be absolute and must end with a slash.
-// For example:
+// The constructor creates a CloudSyncClient, against which all future calls
+// can be made. The serviceUri is the starting URI of the API and provides
+// key information about the service and links to other resources. Upon
+// construction, this URI will be dereferenced synchronously and the
+// information about the service will be cached within the object
+// in the ".info" field.
+// 
+// Example use:
 //
-// var service = new CloudSyncClient(document.location.href + "api/rest/");
+// var serviceUri = document.location.href + "api/rest/service";
+// var service = new CloudSyncClient(serviceUri);
+// alert("This is CloudSync v" + service.info.version);
+// service.getCurrentUser(function(data) {
+//   alert("Hello, " + data.user.name); 
+// });
 //
-function CloudSyncClient(baseURL) {
+function CloudSyncClient(serviceUri) {
 
+  this.serviceUri = serviceUri;
+  
+  // CONSTANTS
+
+  var OBJECTSET_JSON = "application/vnd.fcrepo-cloudsync.objectset+json";
+  var OBJECTSETS_JSON = "application/vnd.fcrepo-cloudsync.objectsets+json";
+  var OBJECTSTORE_JSON = "application/vnd.fcrepo-cloudsync.objectstore+json";
+  var OBJECTSTORES_JSON = "application/vnd.fcrepo-cloudsync.objectstores+json";
+  var PROVIDERACCOUNTS_JSON = "application/vnd.fcrepo-cloudsync.provideraccounts+json";
+  var SERVICEINFO_JSON = "application/vnd.fcrepo-cloudsync.serviceinfo+json";
+  var SERVICEINIT_JSON = "application/vnd.fcrepo-cloudsync.serviceinit+json";
+  var SPACES_JSON = "application/vnd.fcrepo-cloudsync.spaces+json";
+  var TASK_JSON = "application/vnd.fcrepo-cloudsync.task+json";
+  var TASKLOG_JSON = "application/vnd.fcrepo-cloudsync.tasklog+json";
+  var TASKLOGS_JSON = "application/vnd.fcrepo-cloudsync.tasklogs+json";
+  var TASKS_JSON = "application/vnd.fcrepo-cloudsync.tasks+json";
+  var USER_JSON = "application/vnd.fcrepo-cloudsync.user+json";
+  var USERS_JSON = "application/vnd.fcrepo-cloudsync.users+json";
+ 
   //==========================================================================
   //                            PUBLIC METHODS
   //==========================================================================
 
   //--------------------------------------------------------------------------
-  //                             Service Info
+  //                               Service
   //--------------------------------------------------------------------------
 
-  this.getServiceInfo = function(success, error) {
-    doGet("service", success, error);
+  this.getServiceInfo = function(success, async, error) {
+    doGet(serviceUri, SERVICEINFO_JSON, success, async, error);
   };
 
-  this.updateServiceInfo = function(data, success, error) {
-    doPatch("service", data, success, error);
+  this.initialize = function(data, success, async, error) {
+    doPost(serviceUri, SERVICEINIT_JSON, SERVICEINFO_JSON, data, success, async, error);
   };
 
   //--------------------------------------------------------------------------
   //                                Users
   //--------------------------------------------------------------------------
 
-  this.createUser = function(data, success, error) {
-    doPost("users", data, success, error);
+  this.createUser = function(data, success, async, error) {
+    doPost(this.info.usersUri, USER_JSON, USER_JSON, data, success, async, error);
   };
 
-  this.listUsers = function(success, error) {
-    doGet("users", success, error);
+  this.listUsers = function(success, async, error) {
+    doGet(this.info.usersUri, USERS_JSON, success, async, error);
   };
 
-  this.getUser = function(id, success, error) {
-    doGet("users/" + id, success, error);
+  this.getUser = function(uri, success, async, error) {
+    doGet(uri, USER_JSON, success, async, error);
   };
 
-  this.getCurrentUser = function(success, error) {
-    doGet("users/current", success, error);
+  this.getCurrentUser = function(success, async, error) {
+    doGet(this.info.currentUserUri, USER_JSON, success, async, error);
   };
 
-  this.updateUser = function(id, data, success, error) {
-    doPatch("users/" + id, data, success, error);
+  this.updateUser = function(uri, data, success, async, error) {
+    doPatch(uri, USER_JSON, data, success, async, error);
   };
 
-  this.deleteUser = function(id, success, error) {
-    doDelete("users/" + id, success, error);
+  this.deleteUser = function(uri, success, async, error) {
+    doDelete(uri, success, async, error);
   };
 
   //--------------------------------------------------------------------------
   //                                Tasks
   //--------------------------------------------------------------------------
 
-  this.createTask = function(data, success, error) {
-    doPost("tasks", data, success, error);
+  this.createTask = function(data, success, async, error) {
+    doPost(this.info.tasksUri, TASK_JSON, TASK_JSON, data, success, async, error);
   };
 
-  this.listTasks = function(success, error) {
-    doGet("tasks", success, error);
+  this.listTasks = function(success, async, async, error) {
+    doGet(this.info.tasksUri, TASKS_JSON, success, async, error);
   };
 
-  this.getTask = function(id, success, error) {
-    doGet("tasks/" + id, success, error);
+  this.getTask = function(uri, success, async, error) {
+    doGet(uri, TASK_JSON, success, async, error);
   };
 
-  this.updateTask = function(id, data, success, error) {
-    doPatch("tasks/" + id, data, success, error);
+  this.updateTask = function(uri, data, success, async, error) {
+    doPatch(uri, TASK_JSON, data, success, async, error);
   };
 
-  this.deleteTask = function(id, success, error) {
-    doDelete("tasks/" + id, success, error);
+  this.deleteTask = function(uri, success, async, error) {
+    doDelete(uri, success, async, error);
   };
 
   //--------------------------------------------------------------------------
   //                              Object Sets
   //--------------------------------------------------------------------------
 
-  this.createObjectSet = function(data, success, error) {
-    doPost("objectsets", data, success, error);
+  this.createObjectSet = function(data, success, async, error) {
+    doPost(this.info.objectSetsUri, OBJECTSET_JSON, OBJECTSET_JSON, data, success, async, error);
   };
 
-  this.listObjectSets = function(success, error) {
-    doGet("objectsets", success, error);
+  this.listObjectSets = function(success, async, error) {
+    doGet(this.info.objectSetsUri, OBJECTSETS_JSON, success, async, error);
   };
 
-  this.getObjectSet = function(id, success, error) {
-    doGet("objectsets/" + id, success, error);
+  this.getObjectSet = function(uri, success, async, error) {
+    doGet(uri, OBJECTSET_JSON, success, async, error);
   };
 
-  this.updateObjectSet = function(id, data, success, error) {
-    doPatch("objectsets/" + id, data, success, error);
-  };
-
-  this.deleteObjectSet = function(id, success, error) {
-    doDelete("objectsets/" + id, success, error);
+  this.deleteObjectSet = function(uri, success, async, error) {
+    doDelete(uri, success, async, error);
   };
 
   //--------------------------------------------------------------------------
   //                             Object Stores
   //--------------------------------------------------------------------------
 
-  this.createObjectStore = function(data, success, error) {
-    doPost("objectstores", data, success, error);
+  this.createObjectStore = function(data, success, async, error) {
+    doPost(this.info.objectStoresUri, OBJECTSTORE_JSON, OBJECTSTORE_JSON, data, success, async, error);
   };
 
-  this.listObjectStores = function(success, error) {
-    doGet("objectstores", success, error);
+  this.listObjectStores = function(success, async, error) {
+    doGet(this.info.objectStoresUri, OBJECTSTORES_JSON, success, async, error);
   };
 
-  this.getObjectStore = function(id, success, error) {
-    doGet("objectstores/" + id, success, error);
+  this.getObjectStore = function(uri, success, async, error) {
+    doGet(uri, OBJECTSTORE_JSON, success, async, error);
   };
 
-  this.queryObjectStore = function(id, setId, limit, offset, success, error) {
-    doGet("objectstores/" + id + "/objects?set=" + setId + "&limit=" + limit + "&offset=" + offset, success, error);
-  };
-
-  this.updateObjectStore = function(id, data, success, error) {
-    doPatch("objectstores/" + id, data, success, error);
-  };
-
-  this.deleteObjectStore = function(id, success, error) {
-    doDelete("objectstores/" + id, success, error);
-  };
-
-  //--------------------------------------------------------------------------
-  //                             System Logs
-  //--------------------------------------------------------------------------
-
-  this.listSystemLogs = function(success, error) {
-    doGet("systemlogs", success, error);
-  };
-
-  this.getSystemLog = function(id, success, error) {
-    doGet("systemlogs/" + id, success, error);
-  };
-
-  this.getSystemLogContent = function(id, success, error) {
-    doGetText("systemlogs/" + id + "/content", success, error);
-  };
-
-  this.deleteSystemLog = function(id, success, error) {
-    doDelete("systemlogs/" + id, success, error);
+  this.deleteObjectStore = function(uri, success, async, error) {
+    doDelete(uri, success, async, error);
   };
 
   //--------------------------------------------------------------------------
   //                              Task Logs
   //--------------------------------------------------------------------------
 
-  this.listTaskLogs = function(success, error) {
-    doGet("tasklogs", success, error);
+  this.listTaskLogs = function(success, async, error) {
+    doGet(this.info.taskLogsUri, TASKLOGS_JSON, success, async, error);
   };
 
-  this.getTaskLog = function(id, success, error) {
-    doGet("tasklogs/" + id, success, error);
+  this.getTaskLog = function(uri, success, async, error) {
+    doGet(uri, TASKLOG_JSON, success, async, error);
   };
 
-  this.getTaskLogContent = function(id, success, error) {
-    doGetText("tasklogs/" + id + "/content", success, error);
-  };
-
-  this.deleteTaskLog = function(id, success, error) {
-    doDelete("tasklogs/" + id, success, error);
+  this.deleteTaskLog = function(uri, success, async, error) {
+    doDelete(uri, success, async, error);
   };
 
   //--------------------------------------------------------------------------
   //                              DuraCloud
   //--------------------------------------------------------------------------
 
-  this.listProviderAccounts = function(url, username, password, success, error) {
-    doGet("duracloud/provideraccounts?url=" + url + "&username=" + username + "&password=" + password, success, error);
+  this.listProviderAccounts = function(url, username, password, success, async, error) {
+    doGet(this.info.providerAccountsUri + "?url=" + url + "&username=" + username + "&password=" + password, PROVIDERACCOUNTS_JSON, success, async, error);
   };
 
-  this.listSpaces = function(url, username, password, providerAccountId, success, error) {
-    doGet("duracloud/spaces?url=" + url + "&username=" + username + "&password=" + password + "&providerAccountId=" + providerAccountId, success, error);
+  this.listSpaces = function(url, username, password, providerAccountId, success, async, error) {
+    doGet(this.info.spacesUri + "?url=" + url + "&username=" + username + "&password=" + password + "&providerAccountId=" + providerAccountId, SPACES_JSON, success, async, error);
   };
 
   //==========================================================================
   //                           PRIVATE METHODS
   //==========================================================================
 
-  function doGet(path, success, error) {
-    doGetOrDelete("GET", "json", path, success, error);
+  function doGet(url, contentType, success, async, error) {
+    doGetOrDelete("GET", "json", url, contentType, success, async, error);
   }
 
-  function doGetText(path, success, error) {
-    doGetOrDelete("GET", "text", path, success, error);
+  function doPost(url, inputContentType, outputContentType, data, success, async, error) {
+    doPostOrPatch("POST", url, inputContentType, outputContentType, data, success, async, error);
   }
 
-  function doPost(path, data, success, error) {
-    doPostOrPatch("POST", path, data, success, error);
+  function doPatch(url, contentType, data, success, async, error) {
+    doPostOrPatch("PATCH", url, contentType, contentType, data, success, async, error);
   }
 
-  function doPatch(path, data, success, error) {
-    doPostOrPatch("PATCH", path, data, success, error);
+  function doDelete(url, success, async, error) {
+    doGetOrDelete("DELETE", "json", url, "*/*", success, async, error);
   }
 
-  function doDelete(path, success, error) {
-    doGetOrDelete("DELETE", "json", path, success, error);
-  }
-
-  function doGetOrDelete(method, dataType, path, success, error) {
-    var url = baseURL + path;
+  function doGetOrDelete(method, dataType, url, contentType, success, async, error) {
     var errorCallback = error;
     if (typeof error === 'undefined') {
       errorCallback = defaultErrorCallback;
     }
+    var asyncRequest = async;
+    if (typeof async === 'undefined') {
+      asyncRequest = true;
+    }
     $.ajax({
       type: method,
       url: url,
+      headers: {
+        Accept: contentType
+      },
       dataType: dataType,
       success: success,
+      async: asyncRequest,
       error: function(httpRequest, textStatus, errorThrown) {
         errorCallback(httpRequest, method, url, textStatus, errorThrown);
       }
     })
   }
 
-  function doPostOrPatch(method, path, data, success, error) {
-    var url = baseURL + path;
-    //alert("Request:\n\n" + method + " " + url + "\n\n" + JSON.stringify(data));
+  function doPostOrPatch(method, url, inputContentType, outputContentType, data, success, async, error) {
     var errorCallback = error;
     if (typeof error === 'undefined') {
       errorCallback = defaultErrorCallback;
     }
+    var asyncRequest = async;
+    if (typeof async === 'undefined') {
+      asyncRequest = true;
+    }
     $.ajax({
       type: method,
       url: url,
-      contentType: "application/json",
+      headers: {
+        Accept: outputContentType
+      },
+      contentType: inputContentType,
       data: JSON.stringify(data),
       dataType: "json",
       success: success,
+      async: asyncRequest,
       error: function(httpRequest, textStatus, errorThrown) {
         errorCallback(httpRequest, method, url, textStatus, errorThrown);
       }
@@ -265,4 +268,11 @@ function CloudSyncClient(baseURL) {
     }
   }
 
+  // CONSTRUCTION
+
+  var data = "";
+  this.getServiceInfo(function(result) {
+      data = result.service;
+  }, false);
+  this.info = data;
 }

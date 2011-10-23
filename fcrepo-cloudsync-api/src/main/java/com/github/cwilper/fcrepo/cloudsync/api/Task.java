@@ -1,5 +1,7 @@
 package com.github.cwilper.fcrepo.cloudsync.api;
 
+import java.net.URI;
+
 import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement(name="task")
@@ -27,10 +29,12 @@ public class Task {
     public static final String CANCELING = "Canceling";
 
     private String id;
+    private URI uri;
     private String name;
     private String type;
     private String state;
     private String activeLogId;
+    private URI activeLogUri;
     private String schedule;
     private String data;
 
@@ -41,6 +45,14 @@ public class Task {
     public void setId(String id) {
         this.id = id;
     }
+    
+    public URI getUri() {
+        return uri;
+    }
+    
+    public void setUri(URI uri) {
+        this.uri = uri;
+    }    
 
     public String getName() {
         return name;
@@ -64,6 +76,16 @@ public class Task {
 
     public void setActiveLogId(String activeLogId) {
         this.activeLogId = activeLogId;
+    }
+
+    
+    public URI getActiveLogUri() {
+        return activeLogUri;
+    }
+
+    
+    public void setActiveLogUri(URI activeLogUri) {
+        this.activeLogUri = activeLogUri;
     }
 
     public String getSchedule() {

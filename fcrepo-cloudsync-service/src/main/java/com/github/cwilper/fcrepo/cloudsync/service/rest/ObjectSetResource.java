@@ -1,15 +1,8 @@
 package com.github.cwilper.fcrepo.cloudsync.service.rest;
 
-import com.github.cwilper.fcrepo.cloudsync.api.CloudSyncService;
-import com.github.cwilper.fcrepo.cloudsync.api.NameConflictException;
-import com.github.cwilper.fcrepo.cloudsync.api.ObjectSet;
-import com.github.cwilper.fcrepo.cloudsync.api.ResourceInUseException;
-import com.github.cwilper.fcrepo.cloudsync.api.ResourceNotFoundException;
-import com.github.cwilper.fcrepo.cloudsync.service.util.PATCH;
-import org.apache.cxf.jaxrs.model.wadl.Description;
-import org.apache.cxf.jaxrs.model.wadl.Descriptions;
-import org.apache.cxf.jaxrs.model.wadl.DocTarget;
+import java.util.List;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -21,11 +14,31 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
-import java.net.URI;
-import java.util.List;
 
-@Path("objectsets")
+import org.apache.cxf.jaxrs.model.wadl.Description;
+import org.apache.cxf.jaxrs.model.wadl.Descriptions;
+import org.apache.cxf.jaxrs.model.wadl.DocTarget;
+
+import com.github.cwilper.fcrepo.cloudsync.api.CloudSyncService;
+import com.github.cwilper.fcrepo.cloudsync.api.NameConflictException;
+import com.github.cwilper.fcrepo.cloudsync.api.ObjectSet;
+import com.github.cwilper.fcrepo.cloudsync.api.ResourceInUseException;
+import com.github.cwilper.fcrepo.cloudsync.api.ResourceNotFoundException;
+
+@Path("objectSets")
 public class ObjectSetResource extends AbstractResource {
+    
+    public static final String OBJECTSET_JSON =
+            "application/vnd.fcrepo-cloudsync.objectset+json";
+
+    public static final String OBJECTSET_XML =
+            "application/vnd.fcrepo-cloudsync.objectset+xml";
+
+    public static final String OBJECTSETS_JSON =
+            "application/vnd.fcrepo-cloudsync.objectsets+json";
+
+    public static final String OBJECTSETS_XML =
+            "application/vnd.fcrepo-cloudsync.objectsets+xml";
 
     public ObjectSetResource(CloudSyncService service) {
         super(service);
@@ -33,17 +46,19 @@ public class ObjectSetResource extends AbstractResource {
 
     @POST
     @Path("/")
-    @Consumes({XML, JSON})
+    @Consumes({OBJECTSET_JSON, OBJECTSET_XML})
+    @Produces({JSON, XML, OBJECTSET_JSON, OBJECTSET_XML})
     @Descriptions({
         @Description(value = "Creates an object set", target = DocTarget.METHOD),
         @Description(value = STATUS_201_CREATED, target = DocTarget.RESPONSE)
     })
     public Response createObjectSet(@Context UriInfo uriInfo,
+                                    @Context HttpServletRequest req,
                                     ObjectSet objectSet) {
         try {
             ObjectSet newObjectSet = service.createObjectSet(objectSet);
-            URI uri = getResourceURI(uriInfo.getRequestUri(), newObjectSet.getId());
-            return Response.created(uri).entity(newObjectSet).build();
+            setUri(uriInfo, req, newObjectSet);
+            return Response.created(newObjectSet.getUri()).entity(newObjectSet).build();
         } catch (NameConflictException e) {
             throw new WebApplicationException(e, Response.Status.CONFLICT);
         }
@@ -51,46 +66,36 @@ public class ObjectSetResource extends AbstractResource {
 
     @GET
     @Path("/")
-    @Produces({XML, JSON})
+    @Produces({JSON, XML, OBJECTSETS_JSON, OBJECTSETS_XML})
     @Descriptions({
         @Description(value = "Lists all object sets", target = DocTarget.METHOD),
         @Description(value = STATUS_200_OK, target = DocTarget.RESPONSE)
     })
-    public List<ObjectSet> listObjectSets() {
-        return service.listObjectSets();
+    public List<ObjectSet> listObjectSets(@Context UriInfo uriInfo,
+                                          @Context HttpServletRequest req) {
+        List<ObjectSet> objectSets = service.listObjectSets();
+        for (ObjectSet objectSet: objectSets) {
+            setUri(uriInfo, req, objectSet);
+        }
+        return objectSets;
     }
 
     @GET
     @Path("{id}")
-    @Produces({XML, JSON})
+    @Produces({JSON, XML, OBJECTSET_JSON, OBJECTSET_XML})
     @Descriptions({
         @Description(value = "Gets an object set", target = DocTarget.METHOD),
         @Description(value = STATUS_200_OK, target = DocTarget.RESPONSE)
     })
-    public ObjectSet getObjectSet(@PathParam("id") String id) {
+    public ObjectSet getObjectSet(@Context UriInfo uriInfo,
+                                  @Context HttpServletRequest req,
+                                  @PathParam("id") String id) {
         try {
-            return service.getObjectSet(id);
+            ObjectSet objectSet = service.getObjectSet(id);
+            setUri(uriInfo, req, objectSet);
+            return objectSet;
         } catch (ResourceNotFoundException e) {
             throw new WebApplicationException(e, Response.Status.NOT_FOUND);
-        }
-    }
-
-    @PATCH
-    @Path("{id}")
-    @Consumes({XML, JSON})
-    @Produces({XML, JSON})
-    @Descriptions({
-        @Description(value = "Updates an object set", target = DocTarget.METHOD),
-        @Description(value = STATUS_200_OK, target = DocTarget.RESPONSE)
-    })
-    public ObjectSet updateObjectSet(@PathParam("id") String id,
-                                     ObjectSet objectSet) {
-        try {
-            return service.updateObjectSet(id, objectSet);
-        } catch (ResourceNotFoundException e) {
-            throw new WebApplicationException(e, Response.Status.NOT_FOUND);
-        } catch (NameConflictException e) {
-            throw new WebApplicationException(e, Response.Status.CONFLICT);
         }
     }
 
@@ -108,4 +113,8 @@ public class ObjectSetResource extends AbstractResource {
         }
     }
 
+    private void setUri(UriInfo uriInfo, HttpServletRequest req, ObjectSet objectSet) {
+        objectSet.setUri(URIMapper.getUri(uriInfo, req, "objectSets/" + objectSet.getId()));
+        objectSet.setId(null);
+    }
 }

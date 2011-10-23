@@ -1,6 +1,5 @@
 package com.github.cwilper.fcrepo.cloudsync.service.dao;
 
-import com.github.cwilper.fcrepo.cloudsync.api.ObjectInfo;
 import com.github.cwilper.fcrepo.cloudsync.api.ObjectStore;
 import com.github.cwilper.fcrepo.cloudsync.service.backend.StoreConnector;
 import com.github.cwilper.fcrepo.cloudsync.service.util.StringUtil;
@@ -12,7 +11,6 @@ import org.springframework.jdbc.core.RowMapper;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 
 public class ObjectStoreDao extends AbstractDao {
@@ -24,8 +22,6 @@ public class ObjectStoreDao extends AbstractDao {
             + "  type VARCHAR(32) NOT NULL,\n"
             + "  data VARCHAR(1024) NOT NULL,\n"
             + "  CONSTRAINT ObjectStoreUniqueName unique (name))";
-
-    private static final String[] VALID_TYPES = { "fedora", "duracloud" };
 
     public ObjectStoreDao(JdbcTemplate db) {
         super(db);
@@ -86,19 +82,6 @@ public class ObjectStoreDao extends AbstractDao {
         o.setType(rs.getString("type"));
         o.setData(rs.getString("data"));
         return o;
-    }
-
-    public List<ObjectInfo> queryObjectStore(String id, String set, long limit, long offset) {
-        List<ObjectInfo> list = new ArrayList<ObjectInfo>();
-        ObjectInfo item = new ObjectInfo();
-        item.setPid("test:object1");
-        list.add(item);
-        return list;
-    }
-
-    public ObjectStore updateObjectStore(String id, ObjectStore objectStore) {
-        // TODO: Implement me...which fields can be updated?
-        return objectStore;
     }
 
     public void deleteObjectStore(String id) {

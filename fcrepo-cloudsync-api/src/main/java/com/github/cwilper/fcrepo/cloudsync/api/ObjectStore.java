@@ -1,11 +1,14 @@
 package com.github.cwilper.fcrepo.cloudsync.api;
 
+import java.net.URI;
+
 import javax.xml.bind.annotation.XmlRootElement;
 
-@XmlRootElement(name="objectstore")
+@XmlRootElement(name="objectStore")
 public class ObjectStore {
 
     private String id;
+    private URI uri;
     private String name;
     private String type;
     private String data;
@@ -16,6 +19,14 @@ public class ObjectStore {
 
     public void setId(String id) {
         this.id = id;
+    }
+    
+    public URI getUri() {
+        return uri;
+    }
+    
+    public void setUri(URI uri) {
+        this.uri = uri;
     }
 
     public String getName() {

@@ -11,6 +11,7 @@
 <script type="text/javascript" src="js/jquery-1.6.4.min.js"></script>
 <script type="text/javascript" src="js/jquery-ui-1.8.16.custom.min.js"></script>
 <script type="text/javascript" src="js/json2.js"></script>
+<script type="text/javascript" src="js/md5-min.js"></script>
 <script type="text/javascript" src="js/cloudsync-client.js"></script>
 <script type="text/javascript" src="js/cloudsync-ui.js"></script>
 </head>
@@ -141,13 +142,13 @@
   <table>
     <tr>
       <td>List</td>
-      <td><select id="NewListTask-setId">
+      <td><select id="NewListTask-setUri">
         ...
       </select></td>
     </tr>
     <tr>
       <td>in</td>
-      <td><select id="NewListTask-storeId">
+      <td><select id="NewListTask-storeUri">
         ...
       </select></td>
     </tr>
@@ -170,24 +171,24 @@
   <table>
     <tr>
       <td>Copy</td>
-      <td><select id="NewCopyTask-setId">
+      <td><select id="NewCopyTask-setUri">
         ...
       </select></td>
     </tr>
     <tr>
       <td>in</td>
-      <td><select id="NewCopyTask-queryStoreId">
+      <td><select id="NewCopyTask-queryStoreUri">
         ...
       </select></td>
     </tr>
     <tr>
       <td>from</td>
-      <td><select id="NewCopyTask-sourceStoreId">
+      <td><select id="NewCopyTask-sourceStoreUri">
         ...
       </select></td>
     <tr>
       <td>to</td>
-      <td><select id="NewCopyTask-destStoreId">
+      <td><select id="NewCopyTask-destStoreUri">
         ...
       </select></td>
     </tr>
@@ -426,7 +427,7 @@
 <div class="ui-helper-hidden" id="dialog-account" title="Change Password">
   <table>
     <tr>
-      <td>Username<span id="account-id" class="ui-helper-hidden"></span></td>
+      <td>Username<span id="account-uri" class="ui-helper-hidden"></span></td>
       <td id="account-username">...</td>
     </tr>
     <tr>

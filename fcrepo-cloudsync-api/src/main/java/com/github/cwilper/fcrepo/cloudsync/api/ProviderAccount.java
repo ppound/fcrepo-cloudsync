@@ -2,7 +2,7 @@ package com.github.cwilper.fcrepo.cloudsync.api;
 
 import javax.xml.bind.annotation.XmlRootElement;
 
-@XmlRootElement(name="provideraccount")
+@XmlRootElement(name="providerAccount")
 public class ProviderAccount {
 
     private String id;

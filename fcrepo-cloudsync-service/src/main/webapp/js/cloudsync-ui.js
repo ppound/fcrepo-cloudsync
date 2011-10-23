@@ -1,5 +1,7 @@
-var restBaseUrl = document.location.href + "api/rest/";
-var service = new CloudSyncClient(restBaseUrl);
+// depends on cloudsync-client.js, json2.js, jquery, and md5-min.js
+
+var serviceUri = document.location.href + "api/rest/service";
+var service = new CloudSyncClient(serviceUri);
 
 var numActiveTasks = 0;
 var secondsSinceTaskRefresh = 0;
@@ -20,7 +22,7 @@ function refreshTasks() {
     numActiveTasks = doSection(data.tasks, "tasks-active", getActiveTaskHtml);
     doSection(data.tasks, "tasks-idle", getIdleTaskHtml);
     service.listTaskLogs(function(data2) {
-      doSection(data2.tasklogs, "tasks-completed", getTaskLogHtml);
+      doSection(data2.taskLogs, "tasks-completed", getTaskLogHtml);
       secondsSinceTaskRefresh = 0;
     });
   });
@@ -28,17 +30,17 @@ function refreshTasks() {
 
 function refreshSets() {
   service.listObjectSets(function(data) {
-    doSection(data.objectsets, "sets-pidpatterns", getPidPatternSetHtml);
-    doSection(data.objectsets, "sets-pidlists", getPidListSetHtml);
-    doSection(data.objectsets, "sets-queries", getQuerySetHtml);
+    doSection(data.objectSets, "sets-pidpatterns", getPidPatternSetHtml);
+    doSection(data.objectSets, "sets-pidlists", getPidListSetHtml);
+    doSection(data.objectSets, "sets-queries", getQuerySetHtml);
     secondsSinceSetRefresh = 0;
   });
 }
 
 function refreshStores() {
   service.listObjectStores(function(data) {
-    doSection(data.objectstores, "stores-duracloud", getDuraCloudStoreHtml);
-    doSection(data.objectstores, "stores-fedora", getFedoraStoreHtml);
+    doSection(data.objectStores, "stores-duracloud", getDuraCloudStoreHtml);
+    doSection(data.objectStores, "stores-fedora", getFedoraStoreHtml);
     secondsSinceStoreRefresh = 0;
   });
 }
@@ -50,16 +52,16 @@ function refreshUsers() {
   secondsSinceUserRefresh = 0;
 }
 
-function doSetTaskState(id, state) {
+function doSetTaskState(uri, state) {
   var data = { task: {
     "state" : state
   }};
-  service.updateTask(id, data, function() {
+  service.updateTask(uri, data, function() {
     refreshTasks();
   });
 }
 
-function doDeleteTask(id, name) {
+function doDeleteTask(uri, name) {
   $("#dialog-confirm").html("<span class=\"ui-icon ui-icon-alert\" style=\"float:left; margin:0 7px 20px 0;\"/>Delete Task <strong>" + esc(name) + "</strong>?");
   $("#dialog-confirm").dialog("option", "buttons", {
     "No": function() {
@@ -67,10 +69,11 @@ function doDeleteTask(id, name) {
     },
     "Yes": function() {
       $(this).dialog("close");
-      service.deleteTask(id,
+      service.deleteTask(uri,
         function() {
           refreshTasks();
         },
+        true,
         function(httpRequest, method, url) {
           if (httpRequest.status == 409) {
             alert("Can't delete Task; it is currently active or being referenced by a task log.");
@@ -85,12 +88,13 @@ function doDeleteTask(id, name) {
   $("#dialog-confirm").dialog("open");
 }
 
-function doViewTaskLog(id) {
-  var url = restBaseUrl + "tasklogs/" + id + "/content";
-  window.open(url, "tasklog");
+function doViewTaskLog(taskLogUri) {
+  service.getTaskLog(taskLogUri, function(data) {
+    window.open(data.taskLog.contentUri, "taskLogContent");
+  });
 }
 
-function doDeleteTaskLog(id, name) {
+function doDeleteTaskLog(uri, name) {
   $("#dialog-confirm").html("<span class=\"ui-icon ui-icon-alert\" style=\"float:left; margin:0 7px 20px 0;\"/>Delete Task Log <strong>" + esc(name) + "</strong>?");
   $("#dialog-confirm").dialog("option", "buttons", {
     "No": function() {
@@ -98,7 +102,7 @@ function doDeleteTaskLog(id, name) {
     },
     "Yes": function() {
       $(this).dialog("close");
-      service.deleteTaskLog(id,
+      service.deleteTaskLog(uri,
           function() {
             refreshTasks();
           });
@@ -112,15 +116,15 @@ function getActiveTaskHtml(item) {
   if (item.state != 'Idle') {
     html += "<div class='item-actions'>";
     if (item.state != 'Starting') {
-      html += "  <button onclick='doViewTaskLog(" + item.activeLogId + ")'>View Log</button>";
+      html += "  <button onclick='doViewTaskLog(\"" + item.activeLogUri + "\")'>View Log</button>";
       if (item.state != 'Paused' && item.state != 'Pausing' && item.state != 'Canceling') {
-        html += "  <button onclick='doSetTaskState(" + item.id + ", \"Pausing\");'>Pause</button>";
+        html += "  <button onclick='doSetTaskState(\"" + item.uri + "\", \"Pausing\");'>Pause</button>";
       }
       if (item.state == 'Paused') {
-        html += "  <button onclick='doSetTaskState(" + item.id + ", \"Resuming\");'>Resume</button>";
+        html += "  <button onclick='doSetTaskState(\"" + item.uri + "\", \"Resuming\");'>Resume</button>";
       }
       if (item.state != 'Canceling') {
-        html += "  <button onclick='doSetTaskState(" + item.id + ", \"Canceling\");'>Cancel</button>";
+        html += "  <button onclick='doSetTaskState(\"" + item.uri + "\", \"Canceling\");'>Cancel</button>";
       }
     }
     html += "</div>";
@@ -137,8 +141,8 @@ function getIdleTaskHtml(item) {
   var html = "";
   if (item.state == 'Idle') {
     html += "<div class='item-actions'>";
-    html += "  <button onClick='doSetTaskState(" + item.id + ", \"Starting\");'>Run</button>";
-    html += "  <button onClick='doDeleteTask(" + item.id + ", \"" + esc(item.name) + "\");'>Delete</button>";
+    html += "  <button onClick='doSetTaskState(\"" + item.uri + "\", \"Starting\");'>Run</button>";
+    html += "  <button onClick='doDeleteTask(\"" + item.uri + "\", \"" + esc(item.name) + "\");'>Delete</button>";
     html += "</div>";
     html += "<div class='item-attributes'>Attributes:";
     $.each(item, function(key, value) {
@@ -153,8 +157,8 @@ function getTaskLogHtml(item) {
   var html = "";
   if (item.resultType != 'Incomplete') {
     html += "<div class='item-actions'>";
-    html += "  <button onclick='doViewTaskLog(" + item.id + ")'>View Log</button>";
-    html += "  <button onclick='doDeleteTaskLog(" + item.id + ", \"" + item.finishDate + "\")'>Delete</button>";
+    html += "  <button onclick='doViewTaskLog(\"" + item.uri + "\")'>View Log</button>";
+    html += "  <button onclick='doDeleteTaskLog(\"" + item.uri + "\", \"" + item.finishDate + "\")'>Delete</button>";
     html += "</div>";
     html += "<div class='item-attributes'>Attributes:";
     $.each(item, function(key, value) {
@@ -165,7 +169,7 @@ function getTaskLogHtml(item) {
   return html;
 }
 
-function doDeleteObjectSet(id, name) {
+function doDeleteObjectSet(uri, name) {
   $("#dialog-confirm").html("<span class=\"ui-icon ui-icon-alert\" style=\"float:left; margin:0 7px 20px 0;\"/>Delete Set <strong>" + esc(name) + "</strong>?");
   $("#dialog-confirm").dialog("option", "buttons", {
     "No": function() {
@@ -173,10 +177,11 @@ function doDeleteObjectSet(id, name) {
     },
     "Yes": function() {
       $(this).dialog("close");
-      service.deleteObjectSet(id,
+      service.deleteObjectSet(uri,
         function() {
           refreshSets();
         },
+        true,
         function(httpRequest, method, url) {
           if (httpRequest.status == 409) {
             alert("Can't delete Set; it is being used by one or more Tasks.");
@@ -195,9 +200,7 @@ function getPidPatternSetHtml(item) {
   var html = "";
   if (item.type == "pidPattern") {
     html += "<div class='item-actions'>";
-    if (item.id != 1) {
-      html += "  <button onClick='doDeleteObjectSet(" + item.id + ", \"" + esc(item.name) + "\");'>Delete</button>";
-    }
+    html += "  <button onClick='doDeleteObjectSet(\"" + item.uri + "\", \"" + esc(item.name) + "\");'>Delete</button>";
     html += "</div>";
     html += "<div><table>";
     html += "  <tr><td><strong>Pattern:</strong></td><td>" + esc(item.data) + "</td></tr>";
@@ -210,7 +213,7 @@ function getPidListSetHtml(item) {
   var html = "";
   if (item.type == "pidList") {
     html += "<div class='item-actions'>";
-    html += "  <button onClick='doDeleteObjectSet(" + item.id + ", \"" + esc(item.name) + "\");'>Delete</button>";
+    html += "  <button onClick='doDeleteObjectSet(\"" + item.uri + "\", \"" + esc(item.name) + "\");'>Delete</button>";
     html += "</div>";
     html += "<div><table>";
     html += "  <tr><td><strong>PIDs:</strong></td><td>" + esc(item.data) + "</td></tr>";
@@ -224,7 +227,7 @@ function getQuerySetHtml(item) {
   if (item.type == "query") {
     var data = $.parseJSON(item.data);
     html += "<div class='item-actions'>";
-    html += "  <button onClick='doDeleteObjectSet(" + item.id + ", \"" + esc(item.name) + "\");'>Delete</button>";
+    html += "  <button onClick='doDeleteObjectSet(\"" + item.uri + "\", \"" + esc(item.name) + "\");'>Delete</button>";
     html += "</div>";
     html += "<div><table>";
     html += "  <tr><td><strong>Query Language:</strong></td><td>" + esc(data.queryType) + "</td></tr>";
@@ -234,7 +237,7 @@ function getQuerySetHtml(item) {
   return html;
 }
 
-function doForgetObjectStore(id, name) {
+function doForgetObjectStore(uri, name) {
   $("#dialog-confirm").html("<span class=\"ui-icon ui-icon-alert\" style=\"float:left; margin:0 7px 20px 0;\"/>Forget Store <strong>" + esc(name) + "</strong>?");
   $("#dialog-confirm").dialog("option", "buttons", {
     "No": function() {
@@ -242,10 +245,11 @@ function doForgetObjectStore(id, name) {
     },
     "Yes": function() {
       $(this).dialog("close");
-      service.deleteObjectStore(id,
+      service.deleteObjectStore(uri,
         function() {
           refreshStores();
         },
+        true,
         function(httpRequest, method, url) {
           if (httpRequest.status == 409) {
             alert("Can't forget Store; it is being used by one or more Tasks.");
@@ -260,40 +264,42 @@ function doForgetObjectStore(id, name) {
   $("#dialog-confirm").dialog("open");
 }
 
-function doChangePassword(id, name) {
-  $("#account-id").html(id);
+function doChangePassword(uri, name) {
+  $("#account-uri").html(uri);
   $("#account-username").html(name);
   $("#account-password1").val("");
   $("#account-password2").val("");
   $("#dialog-account").dialog("open");
 }
 
-function doDemoteUser(id) {
-  doUpdateUser(id, { user: { "admin" : "false" } });
+function doDemoteUser(uri) {
+  doUpdateUser(uri, { user: { "admin" : "false" } });
 }
 
-function doPromoteUser(id) {
-  doUpdateUser(id, { user: { "admin" : "true" } });
+function doPromoteUser(uri) {
+  doUpdateUser(uri, { user: { "admin" : "true" } });
 }
 
-function doDisableUser(id) {
-  doUpdateUser(id, { user: { "enabled" : "false" } });
+function doDisableUser(uri) {
+  doUpdateUser(uri, { user: { "enabled" : "false" } });
 }
 
-function doEnableUser(id) {
-  doUpdateUser(id, { user: { "enabled" : "true" } });
+function doEnableUser(uri) {
+  doUpdateUser(uri, { user: { "enabled" : "true" } });
 }
 
-function doUpdateUser(id, data) {
-  service.updateUser(id, data, function() {
+function doUpdateUser(uri, data) {
+  service.updateUser(uri, data, function() {
     refreshUsers();
-  }, function(httpRequest, method, url) {
+  },
+  true,
+  function(httpRequest, method, url) {
     alert("[Service Error]\n\nUnexpected HTTP response code ("
         + httpRequest.status + ") from request:\n\n" + method + " " + url);
   });
 }
 
-function doDeleteUser(id, name) {
+function doDeleteUser(uri, name) {
   $("#dialog-confirm").html("<span class=\"ui-icon ui-icon-alert\" style=\"float:left; margin:0 7px 20px 0;\"/>Delete User <strong>" + esc(name) + "</strong>?");
   $("#dialog-confirm").dialog("option", "buttons", {
     "No": function() {
@@ -301,10 +307,11 @@ function doDeleteUser(id, name) {
     },
     "Yes": function() {
       $(this).dialog("close");
-      service.deleteUser(id,
+      service.deleteUser(uri,
         function() {
           refreshUsers();
         },
+        true,
         function(httpRequest, method, url) {
           alert("[Service Error]\n\nUnexpected HTTP response code ("
               + httpRequest.status + ") from request:\n\n" + method + " " + url);
@@ -320,7 +327,7 @@ function getDuraCloudStoreHtml(item) {
   if (item.type == "duracloud") {
     var data = $.parseJSON(item.data);
     html += "<div class='item-actions'>";
-    html += "  <button onClick='doForgetObjectStore(" + item.id + ", \"" + esc(item.name) + "\");'>Forget</button>";
+    html += "  <button onClick='doForgetObjectStore(\"" + item.uri + "\", \"" + esc(item.name) + "\");'>Forget</button>";
     html += "</div>";
     html += "<div><table>";
     html += "  <tr><td><strong>DuraStore URL:</strong></td><td>" + esc(data.url) + "</td></tr>";
@@ -342,7 +349,7 @@ function getFedoraStoreHtml(item) {
   if (item.type == "fedora") {
     var data = $.parseJSON(item.data);
     html += "<div class='item-actions'>";
-    html += "  <button onClick='doForgetObjectStore(" + item.id + ", \"" + esc(item.name) + "\");'>Forget</button>";
+    html += "  <button onClick='doForgetObjectStore(\"" + item.uri + "\", \"" + esc(item.name) + "\");'>Forget</button>";
     html += "</div>";
     html += "<div><table>";
     html += "  <tr><td><strong>Base URL:</strong></td><td>" + esc(data.url) + "</td></tr>";
@@ -355,19 +362,19 @@ function getFedoraStoreHtml(item) {
 function getUserHtml(item) {
   var html = "";
   html += "<div class='item-actions'>";
-  html += "  <button onClick='doChangePassword(" + item.id + ", \"" + esc(item.name) + "\");'>Change Password</button>";
-  if (item.admin && item.id != $("#userid").text()) {
-    html += "  <button onClick='doDemoteUser(" + item.id + ");'>Demote</button>";
+  html += "  <button onClick='doChangePassword(\"" + item.uri + "\", \"" + esc(item.name) + "\");'>Change Password</button>";
+  if (item.admin && item.uri != $("#userid").text()) {
+    html += "  <button onClick='doDemoteUser(\"" + item.uri + "\");'>Demote</button>";
   } else if (!item.admin) {
-    html += "  <button onClick='doPromoteUser(" + item.id + ");'>Promote</button>";
+    html += "  <button onClick='doPromoteUser(\"" + item.uri + "\");'>Promote</button>";
   }
-  if (item.enabled && item.id != $("#userid").text()) {
-    html += "  <button onClick='doDisableUser(" + item.id + ");'>Disable</button>";
+  if (item.enabled && item.uri != $("#userid").text()) {
+    html += "  <button onClick='doDisableUser(\"" + item.uri + "\");'>Disable</button>";
   } else if (!item.enabled) {
-    html += "  <button onClick='doEnableUser(" + item.id + ");'>Enable</button>";
+    html += "  <button onClick='doEnableUser(\"" + item.uri + "\");'>Enable</button>";
   }
-  if (item.id != $("#userid").text()) {
-    html += "  <button onClick='doDeleteUser(" + item.id + ", \"" + esc(item.name) + "\");'>Delete</button>";
+  if (item.uri != $("#userid").text()) {
+    html += "  <button onClick='doDeleteUser(\"" + item.uri + "\", \"" + esc(item.name) + "\");'>Delete</button>";
   }
   html += "</div>";
   html += "<div><table>";
@@ -401,7 +408,7 @@ function doSection(items, sectionName, itemHtmlGetter) {
       if (sectionName == 'tasks-active') {
         name = item.state + " - " + item.name;
       }
-      html += getExpandable(name, body, sectionName + "-" + item.id);
+      html += getExpandable(name, body, hex_md5(sectionName + item.uri));
     }
   });
   if (count > 0) {
@@ -415,17 +422,17 @@ function doSection(items, sectionName, itemHtmlGetter) {
   return count;
 }
 
-function isExpanded(id) {
-  return $("#" + id).accordion("option", "active") === 0;
+function isExpanded(cssid) {
+  return $("#" + cssid).accordion("option", "active") === 0;
 }
 
-function getExpandable(title, bodyHtml, id) {
+function getExpandable(title, bodyHtml, cssid) {
   var html = "";
   var suffix = "collapsed";
-  if (isExpanded(id)) {
+  if (isExpanded(cssid)) {
     suffix = "expanded";
   }
-  html += "<div id='" + id + "' class='expandable-" + suffix + "'>";
+  html += "<div id='" + cssid + "' class='expandable-" + suffix + "'>";
   html += "  <h3><a href='#'>" + esc(title) + "</a></h3>";
   html += "  <div class='expandable-body'>" + bodyHtml + "</div>";
   html += "</div>";
@@ -487,7 +494,7 @@ $(function() {
     $("#button-Account").button({
       icons: { primary: "ui-icon-gear" }
     });
-    $("#userid").text(data.user.id);
+    $("#userid").text(data.user.uri);
     if (data.user.admin) {
       $("#tabs").tabs("add", "#users", "Users");
     }
@@ -561,6 +568,7 @@ $(function() {
                 $("#dialog-NewUser").dialog("close");
                 refreshUsers();
               },
+              true,
               function(httpRequest, method, url, textStatus) {
                 alert("Account Creation Failed: " + textStatus);
               }
@@ -587,18 +595,19 @@ $(function() {
         "Save Changes": function() {
           var pass1 = $("#account-password1").val();
           var pass2 = $("#account-password2").val();
-          var id = $("#account-id").text();
+          var uri = $("#account-uri").text();
           if (pass1 != "" && pass1 == pass2) {
             var data = { user: {                                        
               "password" : pass1
             }};                                                                   
-            service.updateUser(id, data,
+            service.updateUser(uri, data,
               function() {                                                      
                 $("#dialog-account").dialog("close");                              
-                if (id == $("#userid").html()) {
+                if (uri == $("#userid").html()) {
                   document.location = 'j_spring_security_logout';
                 }
-              },                                                                
+              },
+              true,
               function(httpRequest, method, url, textStatus) {                  
                 alert("Saving Changes Failed: " + textStatus);              
               }                                                                 
@@ -653,7 +662,7 @@ $(function() {
     hide: 'fade',
     buttons: {
       Save: function() {
-        var data = { objectset: {
+        var data = { objectSet: {
           "name": $("#NewPidPattern-name").val(),
           "type": "pidPattern",
           "data": $("#NewPidPattern-data").val()
@@ -662,7 +671,9 @@ $(function() {
           function() {
             $("#dialog-NewPidPattern").dialog("close");
             refreshSets();
-          }, handleNameCollision);
+          },
+          true,
+          handleNameCollision);
       }
     }
   });
@@ -675,7 +686,7 @@ $(function() {
     hide: 'fade',
     buttons: {
       Save: function() {
-        var data = { objectset: {
+        var data = { objectSet: {
           "name": $("#NewPidList-name").val(),
           "type": "pidList",
           "data": $("#NewPidList-data").val()
@@ -683,7 +694,9 @@ $(function() {
         service.createObjectSet(data, function() {
           $("#dialog-NewPidList").dialog("close");
           refreshSets();
-        }, handleNameCollision);
+        },
+        true,
+        handleNameCollision);
       }
     }
   });
@@ -700,7 +713,7 @@ $(function() {
           "queryType": $("#NewQuery-queryType").val(),
           "queryText": $("#NewQuery-queryText").val()
         };
-        var data = { objectset: {
+        var data = { objectSet: {
           "name": $("#NewQuery-name").val(),
           "type": "query",
           "data": JSON.stringify(typeSpecificData)
@@ -708,7 +721,9 @@ $(function() {
         service.createObjectSet(data, function() {
           $("#dialog-NewQuery").dialog("close");
           refreshSets();
-        }, handleNameCollision);
+        },
+        true,
+        handleNameCollision);
       }
     }
   });
@@ -746,7 +761,7 @@ $(function() {
             // success -- close dialog, then construct and show the next one
             $("#dialog-NewDuraCloudStore").dialog("close");
             var html = "";
-            $.each(data.provideraccounts, function(index, account) {
+            $.each(data.providerAccounts, function(index, account) {
               html += "<option value='" + account.id + "'>";
               html += account.type;
               html += "</option>";
@@ -755,6 +770,7 @@ $(function() {
             showSpacesForProvider($("#NewDuraCloudStore-providerId").val());
             $("#dialog-NewDuraCloudStoreStep2").dialog("open");
           },
+          true,
           function() {
             // failure -- alert and keep dialog open
             alert("Error connecting to DuraCloud instance.\nWrong URL, Username, or Password?");
@@ -809,7 +825,7 @@ $(function() {
           "space": $("#NewDuraCloudStore-space").val(),
           "prefix": $("#NewDuraCloudStore-prefix").val()
         };
-        var data = { objectstore: {
+        var data = { objectStore: {
           "name": $("#NewDuraCloudStoreStep3-name").val(),
           "type": "duracloud",
           "data": JSON.stringify(typeSpecificData)
@@ -818,7 +834,9 @@ $(function() {
             function() {
               $("#dialog-NewDuraCloudStoreStep3").dialog("close");
               refreshStores();
-            }, handleNameCollision);
+            },
+            true,
+            handleNameCollision);
       }
     }
   });
@@ -855,7 +873,7 @@ $(function() {
           "username": $("#NewFedoraStore-username").val(),
           "password": $("#NewFedoraStore-password").val()
         };
-        var data = { objectstore: {
+        var data = { objectStore: {
           "name": $("#NewFedoraStoreStep2-name").val(),
           "type": "fedora",
           "data": JSON.stringify(typeSpecificData)
@@ -864,7 +882,9 @@ $(function() {
             function() {
               $("#dialog-NewFedoraStoreStep2").dialog("close");
               refreshStores();
-            }, handleNameCollision);
+            },
+            true,
+            handleNameCollision);
       }
     }
   });
@@ -917,23 +937,23 @@ $(function() {
         service.listObjectSets(function(sets) {
           // populate sets in dialog, then get stores
           var setOptions = "";
-          $.each(sets.objectsets, function(index, set) {
-            setOptions += "<option value=\"" + set.id + "\">"
+          $.each(sets.objectSets, function(index, set) {
+            setOptions += "<option value=\"" + set.uri + "\">"
             setOptions += set.name;
             setOptions += "</option>";
           });
-          $("#NewListTask-setId").html(setOptions);
-          $("#NewListTask-setId").change(showNewListTaskName);
+          $("#NewListTask-setUri").html(setOptions);
+          $("#NewListTask-setUri").change(showNewListTaskName);
           service.listObjectStores(function(stores) {
             // populate stores in dialog, then show dialog
             var storeOptions = "";
-            $.each(stores.objectstores, function(index, store) {
-              storeOptions += "<option value=\"" + store.id + "\">"
+            $.each(stores.objectStores, function(index, store) {
+              storeOptions += "<option value=\"" + store.uri + "\">"
               storeOptions += store.name;
               storeOptions += "</option>";
             });
-            $("#NewListTask-storeId").html(storeOptions);
-            $("#NewListTask-storeId").change(showNewListTaskName);
+            $("#NewListTask-storeUri").html(storeOptions);
+            $("#NewListTask-storeUri").change(showNewListTaskName);
             $("#NewListTask-name").attr("size", 60);
             showNewListTaskName();
 
@@ -950,28 +970,28 @@ $(function() {
         service.listObjectSets(function(sets) {
           // populate sets in dialog, then get stores
           var setOptions = "";
-          $.each(sets.objectsets, function(index, set) {
-            setOptions += "<option value=\"" + set.id + "\">"
+          $.each(sets.objectSets, function(index, set) {
+            setOptions += "<option value=\"" + set.uri + "\">"
             setOptions += set.name;
             setOptions += "</option>";
           });
-          $("#NewCopyTask-setId").html(setOptions);
-          $("#NewCopyTask-setId").change(showNewCopyTaskName);
+          $("#NewCopyTask-setUri").html(setOptions);
+          $("#NewCopyTask-setUri").change(showNewCopyTaskName);
           service.listObjectStores(function(stores) {
             // populate stores in dialog, then show dialog
             var storeOptions = "";
-            $.each(stores.objectstores, function(index, store) {
-              storeOptions += "<option value=\"" + store.id + "\">"
+            $.each(stores.objectStores, function(index, store) {
+              storeOptions += "<option value=\"" + store.uri + "\">"
               storeOptions += store.name;
               storeOptions += "</option>";
             });
             $("#NewCopyTask-name").attr("size", 60);
-            $("#NewCopyTask-queryStoreId").html(storeOptions);
-            $("#NewCopyTask-queryStoreId").change(showNewCopyTaskName);
-            $("#NewCopyTask-sourceStoreId").html(storeOptions);
-            $("#NewCopyTask-sourceStoreId").change(showNewCopyTaskName);
-            $("#NewCopyTask-destStoreId").html(storeOptions);
-            $("#NewCopyTask-destStoreId").change(showNewCopyTaskName);
+            $("#NewCopyTask-queryStoreUri").html(storeOptions);
+            $("#NewCopyTask-queryStoreUri").change(showNewCopyTaskName);
+            $("#NewCopyTask-sourceStoreUri").html(storeOptions);
+            $("#NewCopyTask-sourceStoreUri").change(showNewCopyTaskName);
+            $("#NewCopyTask-destStoreUri").html(storeOptions);
+            $("#NewCopyTask-destStoreUri").change(showNewCopyTaskName);
             showNewCopyTaskName();
 
             $("#dialog-NewCopyTask").dialog("open");
@@ -990,8 +1010,8 @@ $(function() {
       Save: function() {
         // attempt to save it
         var typeSpecificData = {
-          "setId"  : $("#NewListTask-setId").val(),
-          "storeId": $("#NewListTask-storeId").val()
+          "setUri"  : $("#NewListTask-setUri").val(),
+          "storeUri": $("#NewListTask-storeUri").val()
         };
         var state = "Idle";
         if ($("#NewListTask-runNow").is(":checked")) {
@@ -1007,7 +1027,9 @@ $(function() {
           function() {
             $("#dialog-NewListTask").dialog("close");
             refreshTasks();
-          }, handleNameCollision);
+          },
+          true,
+          handleNameCollision);
       }
     }
   });
@@ -1030,10 +1052,10 @@ $(function() {
           includeManaged = "true";
         }
         var typeSpecificData = {
-          "setId"          : $("#NewCopyTask-setId").val(),
-          "queryStoreId"   : $("#NewCopyTask-queryStoreId").val(),
-          "sourceStoreId"  : $("#NewCopyTask-sourceStoreId").val(),
-          "destStoreId"    : $("#NewCopyTask-destStoreId").val(),
+          "setUri"         : $("#NewCopyTask-setUri").val(),
+          "queryStoreUri"  : $("#NewCopyTask-queryStoreUri").val(),
+          "sourceStoreUri" : $("#NewCopyTask-sourceStoreUri").val(),
+          "destStoreUri"   : $("#NewCopyTask-destStoreUri").val(),
           "overwrite"      : overwrite,
           "includeManaged" : includeManaged
         };
@@ -1051,7 +1073,9 @@ $(function() {
           function() {
             $("#dialog-NewCopyTask").dialog("close");
             refreshTasks();
-          }, handleNameCollision);
+          },
+          true,
+          handleNameCollision);
       }
     }
   });
@@ -1090,29 +1114,27 @@ function handleNameCollision(httpRequest, method, url) {
 }
 
 function showNewListTaskName() {
-  var name = "List " + $("#NewListTask-setId option:selected").text()
-      + " in " + $("#NewListTask-storeId option:selected").text();
+  var name = "List " + $("#NewListTask-setUri option:selected").text()
+      + " in " + $("#NewListTask-storeUri option:selected").text();
   $("#NewListTask-name").val(name);
 }
 
 function showNewCopyTaskName() {
-  var name = "Copy " + $("#NewCopyTask-setId option:selected").text()
-      + " from " + $("#NewCopyTask-sourceStoreId option:selected").text()
-      + " to " + $("#NewCopyTask-destStoreId option:selected").text();
+  var name = "Copy " + $("#NewCopyTask-setUri option:selected").text()
+      + " from " + $("#NewCopyTask-sourceStoreUri option:selected").text()
+      + " to " + $("#NewCopyTask-destStoreUri option:selected").text();
   $("#NewCopyTask-name").val(name);
 }
 
 function showAbout() {
-  service.getServiceInfo(function(data) {
-    $("#dialog-about").dialog("option", "buttons", {
-      "Ok": function() {
-        $(this).dialog("close");
-      }
-    });
-    $("#version").text(data.service.version);
-    $("#builddate").text(data.service.buildDate);
-    $("#dialog-about").dialog("open");
+  $("#dialog-about").dialog("option", "buttons", {
+    "Ok": function() {
+      $(this).dialog("close");
+    }
   });
+  $("#version").text(service.info.version);
+  $("#builddate").text(service.info.buildDate);
+  $("#dialog-about").dialog("open");
 }
 
 function showSpacesForProvider(id) {

@@ -1,25 +1,27 @@
 package com.github.cwilper.fcrepo.cloudsync.service.backend;
 
+import java.io.PrintWriter;
+import java.net.URI;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 import com.github.cwilper.fcrepo.cloudsync.api.ObjectInfo;
 import com.github.cwilper.fcrepo.cloudsync.api.Task;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.ObjectSetDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.ObjectStoreDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.TaskDao;
+import com.github.cwilper.fcrepo.cloudsync.service.rest.URIMapper;
 import com.github.cwilper.fcrepo.cloudsync.service.util.JSON;
 import com.github.cwilper.fcrepo.httpclient.HttpClientConfig;
 
-import java.io.PrintWriter;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
 public class ListTaskRunner extends TaskRunner implements ObjectListHandler {
 
-    private final Integer setId;
-    private final Integer storeId;
+    private final String setId;
+    private final String storeId;
 
-    private final Set<Integer> relatedSetIds = new HashSet<Integer>();
-    private final Set<Integer> relatedStoreIds = new HashSet<Integer>();
+    private final Set<String> relatedSetIds = new HashSet<String>();
+    private final Set<String> relatedStoreIds = new HashSet<String>();
 
     private final HttpClientConfig httpClientConfig;
 
@@ -34,8 +36,8 @@ public class ListTaskRunner extends TaskRunner implements ObjectListHandler {
                           HttpClientConfig httpClientConfig) {
         super(task, taskDao, objectSetDao, objectStoreDao, logWriter, completionListener);
         Map<String, String> map = JSON.getMap(JSON.parse(task.getData()));
-        setId = Integer.parseInt(map.get("setId"));
-        storeId = Integer.parseInt(map.get("storeId"));
+        setId = URIMapper.getId(URI.create(map.get("setUri")));
+        storeId = URIMapper.getId(URI.create(map.get("storeUri")));
         relatedSetIds.add(setId);
         relatedStoreIds.add(storeId);
         this.httpClientConfig = httpClientConfig;
@@ -43,9 +45,11 @@ public class ListTaskRunner extends TaskRunner implements ObjectListHandler {
 
     @Override
     public void runTask() throws Exception {
-        StoreConnector connector = StoreConnector.getInstance(objectStoreDao.getObjectStore("" + storeId), httpClientConfig);
+        StoreConnector connector = StoreConnector.getInstance(
+                objectStoreDao.getObjectStore(storeId), httpClientConfig);
         try {
-            ObjectQuery query = new ObjectQuery(objectSetDao.getObjectSet("" + setId));
+            ObjectQuery query = new ObjectQuery(
+                    objectSetDao.getObjectSet(setId));
             connector.listObjects(query, this);
             if (canceledException != null) {
                 throw canceledException;
@@ -56,12 +60,12 @@ public class ListTaskRunner extends TaskRunner implements ObjectListHandler {
     }
 
     @Override
-    public Set<Integer> getRelatedSetIds() {
+    public Set<String> getRelatedSetIds() {
         return relatedSetIds;
     }
 
     @Override
-    public Set<Integer> getRelatedStoreIds() {
+    public Set<String> getRelatedStoreIds() {
         return relatedStoreIds;
     }
 

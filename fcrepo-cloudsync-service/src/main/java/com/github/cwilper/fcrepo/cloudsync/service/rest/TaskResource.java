@@ -1,15 +1,8 @@
 package com.github.cwilper.fcrepo.cloudsync.service.rest;
 
-import com.github.cwilper.fcrepo.cloudsync.api.CloudSyncService;
-import com.github.cwilper.fcrepo.cloudsync.api.NameConflictException;
-import com.github.cwilper.fcrepo.cloudsync.api.ResourceInUseException;
-import com.github.cwilper.fcrepo.cloudsync.api.ResourceNotFoundException;
-import com.github.cwilper.fcrepo.cloudsync.api.Task;
-import com.github.cwilper.fcrepo.cloudsync.service.util.PATCH;
-import org.apache.cxf.jaxrs.model.wadl.Description;
-import org.apache.cxf.jaxrs.model.wadl.Descriptions;
-import org.apache.cxf.jaxrs.model.wadl.DocTarget;
+import java.util.List;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -21,11 +14,32 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
-import java.net.URI;
-import java.util.List;
+
+import org.apache.cxf.jaxrs.model.wadl.Description;
+import org.apache.cxf.jaxrs.model.wadl.Descriptions;
+import org.apache.cxf.jaxrs.model.wadl.DocTarget;
+
+import com.github.cwilper.fcrepo.cloudsync.api.CloudSyncService;
+import com.github.cwilper.fcrepo.cloudsync.api.NameConflictException;
+import com.github.cwilper.fcrepo.cloudsync.api.ResourceInUseException;
+import com.github.cwilper.fcrepo.cloudsync.api.ResourceNotFoundException;
+import com.github.cwilper.fcrepo.cloudsync.api.Task;
+import com.github.cwilper.fcrepo.cloudsync.service.util.PATCH;
 
 @Path("tasks")
 public class TaskResource extends AbstractResource {
+    
+    public static final String TASK_JSON =
+            "application/vnd.fcrepo-cloudsync.task+json";
+
+    public static final String TASK_XML =
+            "application/vnd.fcrepo-cloudsync.task+xml";
+
+    public static final String TASKS_JSON =
+            "application/vnd.fcrepo-cloudsync.tasks+json";
+
+    public static final String TASKS_XML =
+            "application/vnd.fcrepo-cloudsync.tasks+xml";
 
     public TaskResource(CloudSyncService service) {
         super(service);
@@ -33,17 +47,19 @@ public class TaskResource extends AbstractResource {
 
     @POST
     @Path("/")
-    @Consumes({XML, JSON})
+    @Consumes({TASK_JSON, TASK_XML})
+    @Produces({JSON, XML, TASK_JSON, TASK_XML})
     @Descriptions({
         @Description(value = "Creates a task", target = DocTarget.METHOD),
         @Description(value = STATUS_201_CREATED, target = DocTarget.RESPONSE)
     })
     public Response createTask(@Context UriInfo uriInfo,
+                               @Context HttpServletRequest req,
                                Task task) {
         try {
             Task newTask = service.createTask(task);
-            URI uri = getResourceURI(uriInfo.getRequestUri(), newTask.getId());
-            return Response.created(uri).entity(newTask).build();
+            setUris(uriInfo, req, newTask);
+            return Response.created(newTask.getUri()).entity(newTask).build();
         } catch (NameConflictException e) {
             throw new WebApplicationException(e, Response.Status.CONFLICT);
         }
@@ -51,25 +67,34 @@ public class TaskResource extends AbstractResource {
 
     @GET
     @Path("/")
-    @Produces({XML, JSON})
+    @Produces({JSON, XML, TASKS_JSON, TASKS_XML})
     @Descriptions({
         @Description(value = "Lists all tasks", target = DocTarget.METHOD),
         @Description(value = STATUS_200_OK, target = DocTarget.RESPONSE)
     })
-    public List<Task> listTasks() {
-        return service.listTasks();
+    public List<Task> listTasks(@Context UriInfo uriInfo,
+                                @Context HttpServletRequest req) {
+        List<Task> tasks = service.listTasks();
+        for (Task task: tasks) {
+            setUris(uriInfo, req, task);
+        }
+        return tasks;
     }
 
     @GET
     @Path("{id}")
-    @Produces({XML, JSON})
+    @Produces({JSON, XML, TASK_JSON, TASK_XML})
     @Descriptions({
         @Description(value = "Gets a task", target = DocTarget.METHOD),
         @Description(value = STATUS_200_OK, target = DocTarget.RESPONSE)
     })
-    public Task getTask(@PathParam("id") String id) {
+    public Task getTask(@Context UriInfo uriInfo,
+                        @Context HttpServletRequest req,
+                        @PathParam("id") String id) {
         try {
-            return service.getTask(id);
+            Task task = service.getTask(id);
+            setUris(uriInfo, req, task);
+            return task;
         } catch (ResourceNotFoundException e) {
             throw new WebApplicationException(e, Response.Status.NOT_FOUND);
         }
@@ -77,16 +102,20 @@ public class TaskResource extends AbstractResource {
 
     @PATCH
     @Path("{id}")
-    @Consumes({XML, JSON})
-    @Produces({XML, JSON})
+    @Consumes({TASK_JSON, TASK_XML})
+    @Produces({JSON, XML, TASK_JSON, TASK_XML})
     @Descriptions({
         @Description(value = "Updates a task", target = DocTarget.METHOD),
         @Description(value = STATUS_200_OK, target = DocTarget.RESPONSE)
     })
-    public Task updateTask(@PathParam("id") String id,
+    public Task updateTask(@Context UriInfo uriInfo,
+                           @Context HttpServletRequest req,
+                           @PathParam("id") String id,
                            Task task) {
         try {
-            return service.updateTask(id, task);
+            Task updatedTask = service.updateTask(id, task);
+            setUris(uriInfo, req, updatedTask);
+            return updatedTask;
         } catch (ResourceNotFoundException e) {
             throw new WebApplicationException(e, Response.Status.NOT_FOUND);
         } catch (NameConflictException e) {
@@ -108,4 +137,12 @@ public class TaskResource extends AbstractResource {
         }
     }
 
+    private void setUris(UriInfo uriInfo, HttpServletRequest req, Task task) {
+        task.setUri(URIMapper.getUri(uriInfo, req, "tasks/" + task.getId()));
+        if (task.getActiveLogId() != null && !task.getActiveLogId().equals("0")) {
+            task.setActiveLogUri(URIMapper.getUri(uriInfo, req, "taskLogs/" + task.getActiveLogId()));
+        }
+        task.setActiveLogId(null);
+        task.setId(null);
+    }
 }

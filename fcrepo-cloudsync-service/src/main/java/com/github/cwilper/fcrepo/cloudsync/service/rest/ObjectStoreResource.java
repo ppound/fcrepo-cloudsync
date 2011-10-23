@@ -1,16 +1,8 @@
 package com.github.cwilper.fcrepo.cloudsync.service.rest;
 
-import com.github.cwilper.fcrepo.cloudsync.api.CloudSyncService;
-import com.github.cwilper.fcrepo.cloudsync.api.NameConflictException;
-import com.github.cwilper.fcrepo.cloudsync.api.ObjectInfo;
-import com.github.cwilper.fcrepo.cloudsync.api.ObjectStore;
-import com.github.cwilper.fcrepo.cloudsync.api.ResourceInUseException;
-import com.github.cwilper.fcrepo.cloudsync.api.ResourceNotFoundException;
-import com.github.cwilper.fcrepo.cloudsync.service.util.PATCH;
-import org.apache.cxf.jaxrs.model.wadl.Description;
-import org.apache.cxf.jaxrs.model.wadl.Descriptions;
-import org.apache.cxf.jaxrs.model.wadl.DocTarget;
+import java.util.List;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -18,16 +10,35 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
-import java.net.URI;
-import java.util.List;
 
-@Path("objectstores")
+import org.apache.cxf.jaxrs.model.wadl.Description;
+import org.apache.cxf.jaxrs.model.wadl.Descriptions;
+import org.apache.cxf.jaxrs.model.wadl.DocTarget;
+
+import com.github.cwilper.fcrepo.cloudsync.api.CloudSyncService;
+import com.github.cwilper.fcrepo.cloudsync.api.NameConflictException;
+import com.github.cwilper.fcrepo.cloudsync.api.ObjectStore;
+import com.github.cwilper.fcrepo.cloudsync.api.ResourceInUseException;
+import com.github.cwilper.fcrepo.cloudsync.api.ResourceNotFoundException;
+
+@Path("objectStores")
 public class ObjectStoreResource extends AbstractResource {
+    
+    public static final String OBJECTSTORE_JSON =
+            "application/vnd.fcrepo-cloudsync.objectstore+json";
+
+    public static final String OBJECTSTORE_XML =
+            "application/vnd.fcrepo-cloudsync.objectstore+xml";
+
+    public static final String OBJECTSTORES_JSON =
+            "application/vnd.fcrepo-cloudsync.objectstores+json";
+
+    public static final String OBJECTSTORES_XML =
+            "application/vnd.fcrepo-cloudsync.objectstores+xml";
 
     public ObjectStoreResource(CloudSyncService service) {
         super(service);
@@ -35,17 +46,19 @@ public class ObjectStoreResource extends AbstractResource {
 
     @POST
     @Path("/")
-    @Consumes({XML, JSON})
+    @Consumes({OBJECTSTORE_JSON, OBJECTSTORE_XML})
+    @Produces({JSON, XML, OBJECTSTORE_JSON, OBJECTSTORE_XML})
     @Descriptions({
         @Description(value = "Creates an object store", target = DocTarget.METHOD),
         @Description(value = STATUS_201_CREATED, target = DocTarget.RESPONSE)
     })
     public Response createObjectStore(@Context UriInfo uriInfo,
+                                      @Context HttpServletRequest req,
                                       ObjectStore objectStore) {
         try {
             ObjectStore newObjectStore = service.createObjectStore(objectStore);
-            URI uri = getResourceURI(uriInfo.getRequestUri(), newObjectStore.getId());
-            return Response.created(uri).entity(newObjectStore).build();
+            setUri(uriInfo, req, newObjectStore);
+            return Response.created(newObjectStore.getUri()).entity(newObjectStore).build();
         } catch (NameConflictException e) {
             throw new WebApplicationException(e, Response.Status.CONFLICT);
         }
@@ -53,60 +66,36 @@ public class ObjectStoreResource extends AbstractResource {
 
     @GET
     @Path("/")
-    @Produces({XML, JSON})
+    @Produces({JSON, XML, OBJECTSTORES_JSON, OBJECTSTORES_XML})
     @Descriptions({
         @Description(value = "Lists all object stores", target = DocTarget.METHOD),
         @Description(value = STATUS_200_OK, target = DocTarget.RESPONSE)
     })
-    public List<ObjectStore> listObjectStores() {
-        return service.listObjectStores();
+    public List<ObjectStore> listObjectStores(@Context UriInfo uriInfo,
+                                              @Context HttpServletRequest req) {
+        List<ObjectStore> objectStores = service.listObjectStores();
+        for (ObjectStore objectStore: objectStores) {
+            setUri(uriInfo, req, objectStore);
+        }
+        return objectStores;
     }
 
     @GET
     @Path("{id}")
-    @Produces({XML, JSON})
+    @Produces({JSON, XML, OBJECTSTORE_JSON, OBJECTSTORE_XML})
     @Descriptions({
             @Description(value = "Gets an object store", target = DocTarget.METHOD),
             @Description(value = STATUS_200_OK, target = DocTarget.RESPONSE)
     })
-    public ObjectStore getObjectStore(@PathParam("id") String id) {
+    public ObjectStore getObjectStore(@Context UriInfo uriInfo,
+                                      @Context HttpServletRequest req,
+                                      @PathParam("id") String id) {
         try {
-            return service.getObjectStore(id);
+            ObjectStore objectStore = service.getObjectStore(id);
+            setUri(uriInfo, req, objectStore);
+            return objectStore;
         } catch (ResourceNotFoundException e) {
             throw new WebApplicationException(e, Response.Status.NOT_FOUND);
-        }
-    }
-
-    @GET
-    @Path("{id}/objects")
-    @Produces({XML, JSON})
-    @Descriptions({
-        @Description(value = "Queries an object store", target = DocTarget.METHOD),
-        @Description(value = STATUS_200_OK, target = DocTarget.RESPONSE)
-    })
-    public List<ObjectInfo> queryObjectStore(@PathParam("id") String id,
-                                     @QueryParam("set") String set,
-                                     @QueryParam("limit") long limit,
-                                     @QueryParam("offset") long offset) {
-        return service.queryObjectStore(id, set, limit, offset);
-    }
-
-    @PATCH
-    @Path("{id}")
-    @Consumes({XML, JSON})
-    @Produces({XML, JSON})
-    @Descriptions({
-        @Description(value = "Updates an object store", target = DocTarget.METHOD),
-        @Description(value = STATUS_200_OK, target = DocTarget.RESPONSE)
-    })
-    public ObjectStore updateObjectStore(@PathParam("id") String id,
-                                         ObjectStore objectStore) {
-        try {
-            return service.updateObjectStore(id, objectStore);
-        } catch (ResourceNotFoundException e) {
-            throw new WebApplicationException(e, Response.Status.NOT_FOUND);
-        } catch (NameConflictException e) {
-            throw new WebApplicationException(e, Response.Status.CONFLICT);
         }
     }
 
@@ -123,5 +112,9 @@ public class ObjectStoreResource extends AbstractResource {
             throw new WebApplicationException(e, Response.Status.CONFLICT);
         }
     }
-
+    
+    private void setUri(UriInfo uriInfo, HttpServletRequest req, ObjectStore objectStore) {
+        objectStore.setUri(URIMapper.getUri(uriInfo, req, "objectStores/" + objectStore.getId()));
+        objectStore.setId(null);
+    }
 }

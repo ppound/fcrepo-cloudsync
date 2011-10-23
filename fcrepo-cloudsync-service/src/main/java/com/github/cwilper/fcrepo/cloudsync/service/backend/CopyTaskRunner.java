@@ -1,10 +1,17 @@
 package com.github.cwilper.fcrepo.cloudsync.service.backend;
 
+import java.io.PrintWriter;
+import java.net.URI;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 import com.github.cwilper.fcrepo.cloudsync.api.ObjectInfo;
 import com.github.cwilper.fcrepo.cloudsync.api.Task;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.ObjectSetDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.ObjectStoreDao;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.TaskDao;
+import com.github.cwilper.fcrepo.cloudsync.service.rest.URIMapper;
 import com.github.cwilper.fcrepo.cloudsync.service.util.JSON;
 import com.github.cwilper.fcrepo.cloudsync.service.util.StringUtil;
 import com.github.cwilper.fcrepo.dto.core.ControlGroup;
@@ -12,22 +19,17 @@ import com.github.cwilper.fcrepo.dto.core.Datastream;
 import com.github.cwilper.fcrepo.dto.core.FedoraObject;
 import com.github.cwilper.fcrepo.httpclient.HttpClientConfig;
 
-import java.io.PrintWriter;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
 public class CopyTaskRunner extends TaskRunner implements ObjectListHandler {
 
-    private final Integer setId;
-    private final Integer queryStoreId;
-    private final Integer sourceStoreId;
-    private final Integer destStoreId;
+    private final String setId;
+    private final String queryStoreId;
+    private final String sourceStoreId;
+    private final String destStoreId;
     private final boolean overwrite;
     private final boolean includeManaged;
 
-    private final Set<Integer> relatedSetIds = new HashSet<Integer>();
-    private final Set<Integer> relatedStoreIds = new HashSet<Integer>();
+    private final Set<String> relatedSetIds = new HashSet<String>();
+    private final Set<String> relatedStoreIds = new HashSet<String>();
 
     private final HttpClientConfig httpClientConfig;
 
@@ -47,10 +49,10 @@ public class CopyTaskRunner extends TaskRunner implements ObjectListHandler {
         super(task, taskDao, objectSetDao, objectStoreDao, logWriter,
                 completionListener);
         Map<String, String> map = JSON.getMap(JSON.parse(task.getData()));
-        setId = Integer.parseInt(map.get("setId"));
-        queryStoreId = Integer.parseInt(map.get("queryStoreId"));
-        sourceStoreId = Integer.parseInt(map.get("sourceStoreId"));
-        destStoreId = Integer.parseInt(map.get("destStoreId"));
+        setId = URIMapper.getId(URI.create(map.get("setUri")));
+        queryStoreId = URIMapper.getId(URI.create(map.get("queryStoreUri")));
+        sourceStoreId = URIMapper.getId(URI.create(map.get("sourceStoreUri")));
+        destStoreId = URIMapper.getId(URI.create(map.get("destStoreUri")));
         overwrite = StringUtil.validate("overwrite",
                 map.get("overwrite"),
                 new String[] { "true", "false" }).equals("true");
@@ -67,17 +69,14 @@ public class CopyTaskRunner extends TaskRunner implements ObjectListHandler {
     @Override
     public void runTask() throws Exception {
         queryConnector = StoreConnector.getInstance(
-                objectStoreDao.getObjectStore("" + queryStoreId),
-                httpClientConfig);
+                objectStoreDao.getObjectStore(queryStoreId), httpClientConfig);
         sourceConnector = StoreConnector.getInstance(
-                objectStoreDao.getObjectStore("" + sourceStoreId),
-                httpClientConfig);
+                objectStoreDao.getObjectStore(sourceStoreId), httpClientConfig);
         destConnector = StoreConnector.getInstance(
-                objectStoreDao.getObjectStore("" + destStoreId),
-                httpClientConfig);
+                objectStoreDao.getObjectStore(destStoreId), httpClientConfig);
         try {
             ObjectQuery query = new ObjectQuery(
-                    objectSetDao.getObjectSet("" + setId));
+                    objectSetDao.getObjectSet(setId));
             queryConnector.listObjects(query, this);
             if (canceledException != null) {
                 throw canceledException;
@@ -90,12 +89,12 @@ public class CopyTaskRunner extends TaskRunner implements ObjectListHandler {
     }
 
     @Override
-    public Set<Integer> getRelatedSetIds() {
+    public Set<String> getRelatedSetIds() {
         return relatedSetIds;
     }
 
     @Override
-    public Set<Integer> getRelatedStoreIds() {
+    public Set<String> getRelatedStoreIds() {
         return relatedStoreIds;
     }
 

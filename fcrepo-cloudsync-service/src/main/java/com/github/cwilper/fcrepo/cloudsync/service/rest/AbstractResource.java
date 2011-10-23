@@ -1,15 +1,14 @@
 package com.github.cwilper.fcrepo.cloudsync.service.rest;
 
-import com.github.cwilper.fcrepo.cloudsync.api.CloudSyncService;
-
 import javax.ws.rs.core.MediaType;
-import java.net.URI;
+
+import com.github.cwilper.fcrepo.cloudsync.api.CloudSyncService;
 
 abstract class AbstractResource {
 
-    protected static final String XML = MediaType.APPLICATION_XML;
     protected static final String JSON = MediaType.APPLICATION_JSON;
     protected static final String TEXT = MediaType.TEXT_PLAIN;
+    protected static final String XML = MediaType.APPLICATION_XML;
 
     protected static final String STATUS_200_OK = "Status: 200 OK";
     protected static final String STATUS_201_CREATED = "Status: 201 Created";
@@ -20,13 +19,5 @@ abstract class AbstractResource {
     AbstractResource(CloudSyncService service) {
         this.service = service;
     }
-
-    URI getResourceURI(URI baseURI, String id) {
-        String s = baseURI.toString();
-        if (s.endsWith("/")) {
-            return URI.create(s + id);
-        } else {
-            return URI.create(s + "/" + id);
-        }
-    }
+    
 }
