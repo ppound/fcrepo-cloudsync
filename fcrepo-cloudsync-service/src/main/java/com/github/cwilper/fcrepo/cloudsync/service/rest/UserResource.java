@@ -23,6 +23,7 @@ import com.github.cwilper.fcrepo.cloudsync.api.CloudSyncService;
 import com.github.cwilper.fcrepo.cloudsync.api.NameConflictException;
 import com.github.cwilper.fcrepo.cloudsync.api.ResourceInUseException;
 import com.github.cwilper.fcrepo.cloudsync.api.ResourceNotFoundException;
+import com.github.cwilper.fcrepo.cloudsync.api.UnauthorizedException;
 import com.github.cwilper.fcrepo.cloudsync.api.User;
 import com.github.cwilper.fcrepo.cloudsync.service.util.PATCH;
 
@@ -60,6 +61,8 @@ public class UserResource extends AbstractResource {
             User newUser = service.createUser(user);
             setUri(uriInfo, req, newUser);
             return Response.created(user.getUri()).entity(newUser).build();
+        } catch (UnauthorizedException e) {
+            throw new WebApplicationException(e, Response.Status.FORBIDDEN);
         } catch (NameConflictException e) {
             throw new WebApplicationException(e, Response.Status.CONFLICT);
         }
@@ -130,6 +133,8 @@ public class UserResource extends AbstractResource {
             User updatedUser = service.updateUser(id, user);
             setUri(uriInfo, req, updatedUser);
             return updatedUser;
+        } catch (UnauthorizedException e) {
+            throw new WebApplicationException(e, Response.Status.FORBIDDEN);
         } catch (ResourceNotFoundException e) {
             throw new WebApplicationException(e, Response.Status.NOT_FOUND);
         } catch (NameConflictException e) {
@@ -146,6 +151,8 @@ public class UserResource extends AbstractResource {
     public void deleteUser(@PathParam("id") String id) {
         try {
             service.deleteUser(id);
+        } catch (UnauthorizedException e) {
+            throw new WebApplicationException(e, Response.Status.FORBIDDEN);
         } catch (ResourceInUseException e) {
             throw new WebApplicationException(e, Response.Status.CONFLICT);
         }

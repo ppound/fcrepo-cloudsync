@@ -15,6 +15,7 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.github.cwilper.fcrepo.cloudsync.api.UnauthorizedException;
 import com.github.cwilper.fcrepo.cloudsync.api.User;
 
 public class UserDao extends AbstractDao {
@@ -46,11 +47,10 @@ public class UserDao extends AbstractDao {
     }
 
     // NOTE: Password is hashed before being stored
-    // TODO: Throw authZ exceptions that bubble up to meaningful http codes
-    public User createUser(final User user) {
+    public User createUser(final User user) throws UnauthorizedException {
         User requestingUser = getCurrentUser();
         if (requestingUser != null && !requestingUser.isAdmin()) {
-            throw new RuntimeException("Only admins can create new accounts!");
+            throw new UnauthorizedException("Only admins can create new accounts!");
         }
         tt.execute(new TransactionCallbackWithoutResult() {
             public void doInTransactionWithoutResult(TransactionStatus status) {
@@ -128,7 +128,7 @@ public class UserDao extends AbstractDao {
         return getUser("" + getUserId(userName));
     }
 
-    public User updateUser(String id, User user) {
+    public User updateUser(String id, User user) throws UnauthorizedException {
         User orig = getUser(id);
         String hashedPass = null;
         if (user.getId() == null) {
@@ -153,25 +153,24 @@ public class UserDao extends AbstractDao {
         return user;
     }
   
-    // TODO: Throw authZ exceptions that bubble up to meaningful http codes
-    private void checkUpdateUserPermission(User user) {
+    private void checkUpdateUserPermission(User user) throws UnauthorizedException {
         User requestingUser = getCurrentUser();
         if (requestingUser.isAdmin()) {
             if (requestingUser.getId().equals(user.getId())) {
                 if (!user.isEnabled()) {
-                    throw new RuntimeException("You can't disable your own account!");
+                    throw new UnauthorizedException("You can't disable your own account!");
                 } else if (!user.isAdmin()) {
-                    throw new RuntimeException("You can't remove admin privileges from own account!");
+                    throw new UnauthorizedException("You can't remove admin privileges from own account!");
                 }
             }
         } else if (requestingUser.getId().equals(user.getId())) {
             if (!user.isEnabled()) {
-                throw new RuntimeException("You can't disable your own account!");
+                throw new UnauthorizedException("You can't disable your own account!");
             } else if (user.isAdmin()) {
-                throw new RuntimeException("You can't add admin privileges to own account!");
+                throw new UnauthorizedException("You can't add admin privileges to own account!");
             }
         } else {
-            throw new RuntimeException("Only admins can modify other accounts!");
+            throw new UnauthorizedException("Only admins can modify other accounts!");
         }
     }
     
@@ -209,14 +208,13 @@ public class UserDao extends AbstractDao {
         });        
     }
 
-    // TODO: Throw authZ exceptions that bubble up to meaningful http codes
-    public void deleteUser(final String id) {
+    public void deleteUser(final String id) throws UnauthorizedException {
         User requestingUser = getCurrentUser();
         if (!requestingUser.isAdmin()) {
-            throw new RuntimeException("Only admins can delete accounts!");
+            throw new UnauthorizedException("Only admins can delete accounts!");
         }
         if (requestingUser.getId().equals(id)) {
-            throw new RuntimeException("You can't delete your own account!");
+            throw new UnauthorizedException("You can't delete your own account!");
         }
         final String name = getUser(id).getName();
         tt.execute(new TransactionCallbackWithoutResult() {

@@ -28,6 +28,7 @@ import com.github.cwilper.fcrepo.cloudsync.api.ServiceInit;
 import com.github.cwilper.fcrepo.cloudsync.api.Space;
 import com.github.cwilper.fcrepo.cloudsync.api.Task;
 import com.github.cwilper.fcrepo.cloudsync.api.TaskLog;
+import com.github.cwilper.fcrepo.cloudsync.api.UnauthorizedException;
 import com.github.cwilper.fcrepo.cloudsync.api.User;
 import com.github.cwilper.fcrepo.cloudsync.service.backend.TaskManager;
 import com.github.cwilper.fcrepo.cloudsync.service.dao.DuraCloudDao;
@@ -115,7 +116,11 @@ public class CloudSyncServiceImpl implements CloudSyncService {
         user.setEnabled(true);
         user.setName(serviceInit.getInitialAdminUsername());
         user.setPassword(serviceInit.getInitialAdminPassword());
-        userDao.createUser(user);
+        try {
+            userDao.createUser(user);
+        } catch (UnauthorizedException wontHappen) {
+            throw new RuntimeException(wontHappen);
+        }
         serviceInfoDao.setInitialized();
         return getServiceInfo();
     }
@@ -125,7 +130,7 @@ public class CloudSyncServiceImpl implements CloudSyncService {
     // -----------------------------------------------------------------------
 
     @Override
-    public User createUser(User user) throws NameConflictException {
+    public User createUser(User user) throws UnauthorizedException, NameConflictException {
         try {
             return userDao.createUser(user);
         } catch (DuplicateKeyException e) {
@@ -154,7 +159,7 @@ public class CloudSyncServiceImpl implements CloudSyncService {
 
     @Override
     public User updateUser(String id, User user)
-            throws ResourceNotFoundException, NameConflictException {
+            throws UnauthorizedException, ResourceNotFoundException, NameConflictException {
         try {
             User result = userDao.updateUser(id, user);
             if (result == null) {
@@ -167,7 +172,7 @@ public class CloudSyncServiceImpl implements CloudSyncService {
     }
 
     @Override
-    public void deleteUser(String id) throws ResourceInUseException {
+    public void deleteUser(String id) throws UnauthorizedException, ResourceInUseException {
         if (!id.equals(getCurrentUser().getId())) {
             userDao.deleteUser(id);
         } else {

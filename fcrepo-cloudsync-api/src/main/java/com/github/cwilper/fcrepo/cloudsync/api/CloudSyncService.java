@@ -17,7 +17,7 @@ public interface CloudSyncService {
     //                                Users
     // -----------------------------------------------------------------------
 
-    User createUser(User user) throws NameConflictException;
+    User createUser(User user) throws UnauthorizedException, NameConflictException;
 
     List<User> listUsers();
 
@@ -25,9 +25,9 @@ public interface CloudSyncService {
 
     User getCurrentUser();
 
-    User updateUser(String id, User user) throws ResourceNotFoundException, NameConflictException;
+    User updateUser(String id, User user) throws UnauthorizedException, ResourceNotFoundException, NameConflictException;
 
-    void deleteUser(String id) throws ResourceInUseException;
+    void deleteUser(String id) throws UnauthorizedException, ResourceInUseException;
 
     // -----------------------------------------------------------------------
     //                                Tasks
