@@ -52,7 +52,7 @@ public class DuraCloudDao {
                 if (accountNode.getNodeType() == Node.ELEMENT_NODE) {
                     ProviderAccount p = new ProviderAccount();
                     Node isPrimaryNode = accountNode.getAttributes().getNamedItem("isPrimary");
-                    if (isPrimaryNode != null && isPrimaryNode.getNodeValue().equals("true")) {
+                    if (isPrimaryNode != null && isPrimaryNode.getNodeValue().equals("1")) {
                         p.setPrimary(true);
                     }
                     NodeList childNodes = accountNode.getChildNodes();
