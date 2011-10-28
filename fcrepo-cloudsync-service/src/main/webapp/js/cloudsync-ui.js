@@ -9,6 +9,9 @@ var secondsSinceSetRefresh = 0;
 var secondsSinceStoreRefresh = 0;
 var secondsSinceUserRefresh = 0;
 
+var tasks = [ ];
+var taskLogs = [ ];
+
 function esc(value) {
   return value.replace(/&/g, "&amp;")
               .replace(/</g, "&lt;")
@@ -19,10 +22,12 @@ function esc(value) {
 
 function refreshTasks() {
   service.listTasks(function(data) {
-    numActiveTasks = doSection(data.tasks, "tasks-active", getActiveTaskHtml);
-    doSection(data.tasks, "tasks-idle", getIdleTaskHtml);
+    tasks = data.tasks;
+    numActiveTasks = doSection(tasks, "tasks-active", getActiveTaskHtml);
+    doSection(tasks, "tasks-idle", getIdleTaskHtml);
     service.listTaskLogs(function(data2) {
-      doSection(data2.taskLogs, "tasks-completed", getTaskLogHtml);
+      taskLogs = data2.taskLogs;
+      doSection(taskLogs, "tasks-completed", getTaskLogHtml);
       secondsSinceTaskRefresh = 0;
     });
   });
@@ -392,6 +397,15 @@ function getUserHtml(item) {
   return html;
 }
 
+function getItemWithUri(items, uri) {
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].uri === uri) {
+        return items[i];
+    }
+  }
+  return null;
+}
+
 function doSection(items, sectionName, itemHtmlGetter) {
   var html = "";
   var count = 0;
@@ -401,7 +415,8 @@ function doSection(items, sectionName, itemHtmlGetter) {
       count++;
       var name;
       if (sectionName == 'tasks-completed') {
-        name = item.resultType + " at " + item.finishDate;
+        var task = getItemWithUri(tasks, item.taskUri);
+        name = item.resultType + " - " + task.name;
       } else {
         name = item.name;
       }
