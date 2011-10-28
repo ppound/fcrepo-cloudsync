@@ -15,7 +15,7 @@
   <description>
     The Fedora CloudSync Service and Supporting Libraries
   </description>
-  <url>https://wiki.duraspace.org/display/FEDORACREATE/Fedora+CloudSync</url>
+  <url>https://wiki.duraspace.org/display/CLOUDSYNC</url>
 
   <modules>
     <module>fcrepo-cloudsync-api</module>
