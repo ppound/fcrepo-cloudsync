@@ -451,7 +451,7 @@
     <strong>Build Date:</strong> <span id="builddate">..</span>
   </p>
   <p>
-    <a href="https://wiki.duraspace.org/display/FEDORACREATE/Fedora+CloudSync" target="cloudsync-website">More Information</a>
+    <a href="https://wiki.duraspace.org/display/CLOUDSYNC" target="cloudsync-website">More Information</a>
   </p>
 </div>
 

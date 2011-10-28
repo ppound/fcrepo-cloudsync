@@ -20,7 +20,7 @@ $(function() {
   $("#button-login").button();
   document.f.j_username.focus();
 
-  $("#versionInfo").html("CloudSync v" + service.info.version);
+  $("#versionInfo").html("<a style=\"color: #666\" href=\"https://wiki.duraspace.org/display/CLOUDSYNC\">CloudSync v" + service.info.version + "</a>");
   if (service.info.initialized == false) {
 
     $("#dialog-initialize").dialog({
@@ -114,7 +114,7 @@ $(function() {
 </div>
 
 </td></tr></table>
-  <p id="versionInfo" style="color: #666666">
+  <p id="versionInfo">
     ..
   </p>
 </body>
