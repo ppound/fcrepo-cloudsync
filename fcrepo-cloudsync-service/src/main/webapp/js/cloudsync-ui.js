@@ -3,6 +3,8 @@
 var serviceUri = document.location.href + "api/rest/service";
 var service = new CloudSyncClient(serviceUri);
 
+refreshSets(refreshStores(refreshTasks()));
+
 var numActiveTasks = 0;
 var secondsSinceTaskRefresh = 0;
 var secondsSinceSetRefresh = 0;
@@ -11,6 +13,9 @@ var secondsSinceUserRefresh = 0;
 
 var tasks = [ ];
 var taskLogs = [ ];
+var objectSets = [ ];
+var objectStores = [ ];
+var users = [ ];
 
 function esc(value) {
   return value.replace(/&/g, "&amp;")
@@ -23,36 +28,41 @@ function esc(value) {
 function refreshTasks() {
   service.listTasks(function(data) {
     tasks = data.tasks;
-    numActiveTasks = doSection(tasks, "tasks-active", getActiveTaskHtml);
-    doSection(tasks, "tasks-idle", getIdleTaskHtml);
     service.listTaskLogs(function(data2) {
       taskLogs = data2.taskLogs;
+      numActiveTasks = doSection(tasks, "tasks-active", getActiveTaskHtml);
+      doSection(tasks, "tasks-idle", getIdleTaskHtml);
       doSection(taskLogs, "tasks-completed", getTaskLogHtml);
       secondsSinceTaskRefresh = 0;
     });
   });
 }
 
-function refreshSets() {
+function refreshSets(callback) {
   service.listObjectSets(function(data) {
-    doSection(data.objectSets, "sets-pidpatterns", getPidPatternSetHtml);
-    doSection(data.objectSets, "sets-pidlists", getPidListSetHtml);
-    doSection(data.objectSets, "sets-queries", getQuerySetHtml);
+    objectSets = data.objectSets;
+    doSection(objectSets, "sets-pidpatterns", getPidPatternSetHtml);
+    doSection(objectSets, "sets-pidlists", getPidListSetHtml);
+    doSection(objectSets, "sets-queries", getQuerySetHtml);
     secondsSinceSetRefresh = 0;
+    if (typeof callback != 'undefined') callback();
   });
 }
 
-function refreshStores() {
+function refreshStores(callback) {
   service.listObjectStores(function(data) {
-    doSection(data.objectStores, "stores-duracloud", getDuraCloudStoreHtml);
-    doSection(data.objectStores, "stores-fedora", getFedoraStoreHtml);
+    objectStores = data.objectStores;
+    doSection(objectStores, "stores-duracloud", getDuraCloudStoreHtml);
+    doSection(objectStores, "stores-fedora", getFedoraStoreHtml);
     secondsSinceStoreRefresh = 0;
+    if (typeof callback != 'undefined') callback();
   });
 }
 
 function refreshUsers() {
   service.listUsers(function(data) {
-    doSection(data.users, "users-all", getUserHtml);
+    users = data.users;
+    doSection(users, "users-all", getUserHtml);
   });
   secondsSinceUserRefresh = 0;
 }
@@ -133,11 +143,13 @@ function getActiveTaskHtml(item) {
       }
     }
     html += "</div>";
-    html += "<div class='item-attributes'>Attributes:";
-    $.each(item, function(key, value) {
-      html += "<br/>" + key + ": " + value;
-    });
-    html += "</div>";
+    html += "<div><table>";
+    if (item.activeLogUri) {
+      var taskLog = getByUri(taskLogs, item.activeLogUri);
+      html += "  <tr><td><strong>Started at:</strong></td><td>" + esc(taskLog.startDate) + "</td></tr>";
+    }
+    html += getTaskRows(item);
+    html += "</table></div>";
   }
   return html;
 }
@@ -149,11 +161,36 @@ function getIdleTaskHtml(item) {
     html += "  <button onClick='doSetTaskState(\"" + item.uri + "\", \"Starting\");'>Run</button>";
     html += "  <button onClick='doDeleteTask(\"" + item.uri + "\", \"" + esc(item.name) + "\");'>Delete</button>";
     html += "</div>";
-    html += "<div class='item-attributes'>Attributes:";
-    $.each(item, function(key, value) {
-      html += "<br/>" + key + ": " + value;
-    });
-    html += "</div>";
+    html += "<div><table>";
+    html += getTaskRows(item);
+    html += "</table></div>";
+  }
+  return html;
+}
+
+function getTaskRows(item) {
+  var html = "";
+  var data = JSON.parse(item.data);
+  html += "<tr><td><strong>Type:</strong></td><td>";
+  if (item.type == 'list') {
+    html += "List</td></tr>";
+    var setName = getByUri(objectSets, data.setUri).name;
+    var storeName = getByUri(objectStores, data.storeUri).name;
+    html += "<tr><td><strong>Set:</strong></td><td>" + esc(setName) + "</td></tr>";
+    html += "<tr><td><strong>Query Store:</strong></td><td>" + esc(storeName) + "</td></tr>";
+  } else if (item.type == 'copy') {
+    html += "Copy</td></tr>";
+    var setName = getByUri(objectSets, data.setUri).name;
+    var queryStoreName = getByUri(objectStores, data.queryStoreUri).name;
+    var sourceStoreName = getByUri(objectStores, data.sourceStoreUri).name;
+    var destStoreName = getByUri(objectStores, data.destStoreUri).name;
+    html += "<tr><td><strong>Set:</strong></td><td>" + esc(setName) + "</td></tr>";
+    html += "<tr><td><strong>Query Store:</strong></td><td>" + esc(queryStoreName) + "</td></tr>";
+    html += "<tr><td><strong>Source Store:</strong></td><td>" + esc(sourceStoreName) + "</td></tr>";
+    html += "<tr><td><strong>Destination Store:</strong></td><td>" + esc(destStoreName) + "</td></tr>";
+    html += "<tr><td><strong>Overwrite:</strong></td><td>" + yesOrNo(data.overwrite) + "</td></tr>";
+    html += "<tr><td><strong>Include Objects with Managed Content:</strong></td><td>" + yesOrNo(data.includeManaged) + "</td></tr>";
+
   }
   return html;
 }
@@ -165,11 +202,10 @@ function getTaskLogHtml(item) {
     html += "  <button onclick='doViewTaskLog(\"" + item.uri + "\")'>View Log</button>";
     html += "  <button onclick='doDeleteTaskLog(\"" + item.uri + "\", \"" + item.finishDate + "\")'>Delete</button>";
     html += "</div>";
-    html += "<div class='item-attributes'>Attributes:";
-    $.each(item, function(key, value) {
-      html += "<br/>" + key + ": " + value;
-    });
-    html += "</div>";
+    html += "<div><table>";
+    html += "  <tr><td><strong>Started at:</strong></td><td>" + esc(item.startDate) + "</td></tr>";
+    html += "  <tr><td><strong>Finished at:</strong></td><td>" + esc(item.finishDate) + "</td></tr>";
+    html += "</table></div>";
   }
   return html;
 }
@@ -383,21 +419,23 @@ function getUserHtml(item) {
   }
   html += "</div>";
   html += "<div><table>";
-  var isAdmin = "No";
-  if (item.admin) {
-    isAdmin = "Yes"
-  }
-  var isEnabled = "Yes";
-  if (!item.enabled) {
-    isEnabled = "No";
-  }
+  var isAdmin = yesOrNo(item.admin);
+  var isEnabled = yesOrNo(item.enabled);
   html += "  <tr><td><strong>Administrator:</strong></td><td>" + isAdmin + "</td></tr>";
   html += "  <tr><td><strong>Enabled:</strong></td><td>" + isEnabled + "</td></tr>";
   html += "</table></div>";
   return html;
 }
 
-function getItemWithUri(items, uri) {
+function yesOrNo(value) {
+  if (value) {
+    return "Yes";
+  } else {
+    return "No";
+  }
+}
+
+function getByUri(items, uri) {
   for (var i = 0; i < items.length; i++) {
     if (items[i].uri === uri) {
         return items[i];
@@ -415,7 +453,7 @@ function doSection(items, sectionName, itemHtmlGetter) {
       count++;
       var name;
       if (sectionName == 'tasks-completed') {
-        var task = getItemWithUri(tasks, item.taskUri);
+        var task = getByUri(tasks, item.taskUri);
         name = item.resultType + " - " + task.name;
       } else {
         name = item.name;
@@ -454,10 +492,9 @@ function getExpandable(title, bodyHtml, cssid) {
   return html;
 }
 
-var loadedTasks = false;
+var loadedUsers = false;
 var loadedSets = false;
 var loadedStores = false;
-var loadedUsers = false;
 
 $(function() {
 
@@ -487,12 +524,9 @@ $(function() {
 
   $("#tabs").tabs({
     show: function(event, ui) {
-      if (ui.index == 0 && !loadedTasks) {
-        refreshTasks();
-        loadedTasks = true;
-      } else if (ui.index == 1 && !loadedSets) {
-        refreshSets();
+      if (ui.index == 1 && !loadedSets) {
         loadedSets = true;
+        refreshSets();
       } else if (ui.index == 2 && !loadedStores) {
         loadedStores = true;
         refreshStores();
