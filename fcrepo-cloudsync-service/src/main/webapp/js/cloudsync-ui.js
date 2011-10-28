@@ -22,7 +22,12 @@ function esc(value) {
               .replace(/</g, "&lt;")
               .replace(/>/g, "&gt;")
               .replace(/'/g, "&apos;")
-              .replace(/"/g, "&quot;");
+              .replace(/"/g, "&quot;")
+              .replace(/\n/g, "<br/>")
+              .replace(/&lt;code&gt;/g, "<nobr><code>")
+              .replace(/&lt;\/code&gt;/g, "<\/code></nobr>")
+              .replace(/&lt;strong&gt;/g, "<strong>")
+              .replace(/&lt;\/strong&gt;/g, "<\/strong>");
 }
 
 function refreshTasks() {
@@ -34,8 +39,8 @@ function refreshTasks() {
       doSection(tasks, "tasks-idle", getIdleTaskHtml);
       doSection(taskLogs, "tasks-completed", getTaskLogHtml);
       secondsSinceTaskRefresh = 0;
-    });
-  });
+    }, true, handleServiceError);
+  }, true, handleServiceError);
 }
 
 function refreshSets(callback) {
@@ -46,7 +51,7 @@ function refreshSets(callback) {
     doSection(objectSets, "sets-queries", getQuerySetHtml);
     secondsSinceSetRefresh = 0;
     if (typeof callback != 'undefined') callback();
-  });
+  }, true, handleServiceError);
 }
 
 function refreshStores(callback) {
@@ -56,14 +61,14 @@ function refreshStores(callback) {
     doSection(objectStores, "stores-fedora", getFedoraStoreHtml);
     secondsSinceStoreRefresh = 0;
     if (typeof callback != 'undefined') callback();
-  });
+  }, true, handleServiceError);
 }
 
 function refreshUsers() {
   service.listUsers(function(data) {
     users = data.users;
     doSection(users, "users-all", getUserHtml);
-  });
+  }, true, handleServiceError);
   secondsSinceUserRefresh = 0;
 }
 
@@ -73,17 +78,11 @@ function doSetTaskState(uri, state) {
   }};
   service.updateTask(uri, data, function() {
     refreshTasks();
-  });
+  }, true, handleServiceError);
 }
 
 function doDeleteTask(uri, name) {
-  $("#dialog-confirm").html("<span class=\"ui-icon ui-icon-alert\" style=\"float:left; margin:0 7px 20px 0;\"/>Delete Task <strong>" + esc(name) + "</strong>?");
-  $("#dialog-confirm").dialog("option", "buttons", {
-    "No": function() {
-      $(this).dialog("close");
-    },
-    "Yes": function() {
-      $(this).dialog("close");
+  doConfirm("Delete Task <strong>" + esc(name) + "</strong>?", function() {
       service.deleteTask(uri,
         function() {
           refreshTasks();
@@ -91,39 +90,62 @@ function doDeleteTask(uri, name) {
         true,
         function(httpRequest, method, url) {
           if (httpRequest.status == 409) {
-            alert("Can't delete Task; it is currently active or being referenced by a task log.");
+            showError("Can't delete Task; it is currently active or being referenced by a task log.");
           } else {
-            alert("[Service Error]\n\nUnexpected HTTP response code ("
-                + httpRequest.status + ") from request:\n\n" + method + " " + url);
+            handleServiceError(httpRequest, method, url);
           }
         }
       );
-    }
   });
-  $("#dialog-confirm").dialog("open");
 }
 
 function doViewTaskLog(taskLogUri) {
   service.getTaskLog(taskLogUri, function(data) {
     window.open(data.taskLog.contentUri, "taskLogContent");
-  });
+  }, true, handleServiceError);
 }
 
-function doDeleteTaskLog(uri, name) {
-  $("#dialog-confirm").html("<span class=\"ui-icon ui-icon-alert\" style=\"float:left; margin:0 7px 20px 0;\"/>Delete Task Log <strong>" + esc(name) + "</strong>?");
+function doConfirm(message, callback, customTitle) {
+  $("#dialog-confirm").html("<span class=\"ui-icon ui-icon-alert\" style=\"float:left; margin:0 7px 20px 0;\"/>" + esc(message));
+  var title = customTitle;
+  if (typeof customTitle === 'undefined') {
+    title = "Are you sure?";
+  }
+  $("#dialog-confirm").dialog({ title: title });
   $("#dialog-confirm").dialog("option", "buttons", {
     "No": function() {
       $(this).dialog("close");
     },
     "Yes": function() {
       $(this).dialog("close");
-      service.deleteTaskLog(uri,
-          function() {
-            refreshTasks();
-          });
+      if (typeof callback != 'undefined') callback();
     }
   });
   $("#dialog-confirm").dialog("open");
+}
+
+function showError(message, customTitle, callback) {
+  $("#dialog-error").html("<span class=\"ui-icon ui-icon-error\" style=\"float:left; margin:0 7px 20px 0;\"/>" + esc(message));
+  var title = customTitle;
+  if (typeof customTitle === 'undefined') {
+    title = "Error";
+  }
+  $("#dialog-error").dialog({ title: title });
+  $("#dialog-error").dialog("option", "buttons", {
+    "Ok": function() {
+      $(this).dialog("close");
+      if (typeof callback != 'undefined') callback();
+    }
+  }).addClass("ui-state-error");
+  $("#dialog-error").dialog("open");
+}
+
+function doDeleteTaskLog(uri, name) {
+  doConfirm("Delete Task Log <strong>" + esc(name) + "</strong>?", function() {
+      service.deleteTaskLog(uri, function() {
+        refreshTasks();
+      }, true, handleServiceError);
+  });
 }
 
 function getActiveTaskHtml(item) {
@@ -211,13 +233,7 @@ function getTaskLogHtml(item) {
 }
 
 function doDeleteObjectSet(uri, name) {
-  $("#dialog-confirm").html("<span class=\"ui-icon ui-icon-alert\" style=\"float:left; margin:0 7px 20px 0;\"/>Delete Set <strong>" + esc(name) + "</strong>?");
-  $("#dialog-confirm").dialog("option", "buttons", {
-    "No": function() {
-      $(this).dialog("close");
-    },
-    "Yes": function() {
-      $(this).dialog("close");
+  doConfirm("Delete Set <strong>" + esc(name) + "</strong>?", function() {
       service.deleteObjectSet(uri,
         function() {
           refreshSets();
@@ -225,16 +241,13 @@ function doDeleteObjectSet(uri, name) {
         true,
         function(httpRequest, method, url) {
           if (httpRequest.status == 409) {
-            alert("Can't delete Set; it is being used by one or more Tasks.");
+            showError("Can't delete Set; it is being used by one or more Tasks.");
           } else {
-            alert("[Service Error]\n\nUnexpected HTTP response code ("
-                + httpRequest.status + ") from request:\n\n" + method + " " + url);
+            handleServiceError(httpRequest, method, url);
           }
         }
       );
-    }
   });
-  $("#dialog-confirm").dialog("open");
 }
 
 function getPidPatternSetHtml(item) {
@@ -279,13 +292,7 @@ function getQuerySetHtml(item) {
 }
 
 function doForgetObjectStore(uri, name) {
-  $("#dialog-confirm").html("<span class=\"ui-icon ui-icon-alert\" style=\"float:left; margin:0 7px 20px 0;\"/>Forget Store <strong>" + esc(name) + "</strong>?");
-  $("#dialog-confirm").dialog("option", "buttons", {
-    "No": function() {
-      $(this).dialog("close");
-    },
-    "Yes": function() {
-      $(this).dialog("close");
+  doConfirm("Forget Store <strong>" + esc(name) + "</strong>?", function() {
       service.deleteObjectStore(uri,
         function() {
           refreshStores();
@@ -293,16 +300,13 @@ function doForgetObjectStore(uri, name) {
         true,
         function(httpRequest, method, url) {
           if (httpRequest.status == 409) {
-            alert("Can't forget Store; it is being used by one or more Tasks.");
+            showError("Can't forget Store; it is being used by one or more Tasks.");
           } else {
-            alert("[Service Error]\n\nUnexpected HTTP response code ("
-                + httpRequest.status + ") from request:\n\n" + method + " " + url);
+            handleServiceError(httpRequest, method, url);
           }
         }
       );
-    }
   });
-  $("#dialog-confirm").dialog("open");
 }
 
 function doChangePassword(uri, name) {
@@ -331,36 +335,17 @@ function doEnableUser(uri) {
 
 function doUpdateUser(uri, data) {
   service.updateUser(uri, data, function() {
-    refreshUsers();
-  },
-  true,
-  function(httpRequest, method, url) {
-    alert("[Service Error]\n\nUnexpected HTTP response code ("
-        + httpRequest.status + ") from request:\n\n" + method + " " + url);
-  });
+      refreshUsers();
+  }, true, handleServiceError);
 }
 
 function doDeleteUser(uri, name) {
-  $("#dialog-confirm").html("<span class=\"ui-icon ui-icon-alert\" style=\"float:left; margin:0 7px 20px 0;\"/>Delete User <strong>" + esc(name) + "</strong>?");
-  $("#dialog-confirm").dialog("option", "buttons", {
-    "No": function() {
-      $(this).dialog("close");
-    },
-    "Yes": function() {
-      $(this).dialog("close");
+  doConfirm("Delete User <strong>" + esc(name) + "</strong>?", function() {
       service.deleteUser(uri,
         function() {
           refreshUsers();
-        },
-        true,
-        function(httpRequest, method, url) {
-          alert("[Service Error]\n\nUnexpected HTTP response code ("
-              + httpRequest.status + ") from request:\n\n" + method + " " + url);
-        }
-      );
-    }
+        }, true, handleServiceError);
   });
-  $("#dialog-confirm").dialog("open");
 }
 
 function getDuraCloudStoreHtml(item) {
@@ -428,7 +413,7 @@ function getUserHtml(item) {
 }
 
 function yesOrNo(value) {
-  if (value) {
+  if (value === 'true' || value === true) {
     return "Yes";
   } else {
     return "No";
@@ -547,7 +532,7 @@ $(function() {
     if (data.user.admin) {
       $("#tabs").tabs("add", "#users", "Users");
     }
-  });
+  }, true, handleServiceError);
 
 
   $("#button-NewTask").button({
@@ -618,16 +603,14 @@ $(function() {
                 refreshUsers();
               },
               true,
-              function(httpRequest, method, url, textStatus) {
-                alert("Account Creation Failed: " + textStatus);
-              }
+              handleNameCollision
             );
           } else if (username == "") {
-              alert("Username cannot be blank!");
+              showError("Username cannot be blank!");
           } else if (pass1 == "") {
-              alert("Password cannot be blank!");
+              showError("Password cannot be blank!");
           } else {
-              alert("Passwords do not match!");
+              showError("Passwords do not match!");
           }
         }
       }
@@ -657,14 +640,11 @@ $(function() {
                 }
               },
               true,
-              function(httpRequest, method, url, textStatus) {                  
-                alert("Saving Changes Failed: " + textStatus);              
-              }                                                                 
-            );                                                                    
+              handleServiceError);
           } else if (pass1 == "") {                                                 
-              alert("Password cannot be blank!");                                   
+              showError("Password cannot be blank!");                                   
           } else {                                                                  
-              alert("Passwords do not match!");                                     
+              showError("Passwords do not match!");                                     
           }
         }
       }
@@ -672,6 +652,14 @@ $(function() {
 
 
   $("#dialog-confirm").dialog({
+    autoOpen: false,
+    modal: true,
+    width: 'auto',
+    show: 'fade',
+    hide: 'fade'
+  });
+
+  $("#dialog-error").dialog({
     autoOpen: false,
     modal: true,
     width: 'auto',
@@ -822,7 +810,7 @@ $(function() {
           true,
           function() {
             // failure -- alert and keep dialog open
-            alert("Error connecting to DuraCloud instance.\nWrong URL, Username, or Password?");
+            showError("Error connecting to DuraCloud instance.\nWrong URL, Username, or Password?");
           }
         );
       }
@@ -980,8 +968,13 @@ $(function() {
   $("#dialog-NewTask button").button();
 
   $("#button-NewListTask").click(
-      function() {
-        $("#dialog-NewTask").dialog("close");
+    function() {
+      $("#dialog-NewTask").dialog("close");
+      if (objectStores.length == 0) {
+        showError("You must define at least one Store before creating a List Task.", "No Stores Defined");
+      } else if (objectSets.length == 0) {
+        showError("You must define at least one Set before creating a List Task.", "No Sets Defined");
+      } else {
         // populate selects for new list task
         service.listObjectSets(function(sets) {
           // populate sets in dialog, then get stores
@@ -1005,16 +998,21 @@ $(function() {
             $("#NewListTask-storeUri").change(showNewListTaskName);
             $("#NewListTask-name").attr("size", 60);
             showNewListTaskName();
-
             $("#dialog-NewListTask").dialog("open");
-          });
-        });
+          }, true, handleServiceError);
+        }, true, handleServiceError);
       }
+    }
   );
 
   $("#button-NewCopyTask").click(
-      function() {
-        $("#dialog-NewTask").dialog("close");
+    function() {
+      $("#dialog-NewTask").dialog("close");
+      if (objectStores.length < 2) {
+        showError("You must define at least two Stores before creating a Copy Task.", "Too Few Stores");
+      } else if (objectSets.length == 0) {
+        showError("You must define at least one Set before creating a Copy Task.", "No Sets Defined");
+      } else {
         // populate selects for new copy task
         service.listObjectSets(function(sets) {
           // populate sets in dialog, then get stores
@@ -1044,9 +1042,10 @@ $(function() {
             showNewCopyTaskName();
 
             $("#dialog-NewCopyTask").dialog("open");
-          });
-        });
+          }, true, handleServiceError);
+        }, true, handleServiceError);
       }
+    }
   );
 
   $("#dialog-NewListTask").dialog({
@@ -1155,10 +1154,9 @@ $(function() {
 
 function handleNameCollision(httpRequest, method, url) {
   if (httpRequest.status == 409) {
-    alert("Please use a different name; that one is already used.");
+    showError("Please use a different name; that one is already used.");
   } else {
-    alert("[Service Error]\n\nUnexpected HTTP response code ("
-        + httpRequest.status + ") from request:\n\n" + method + " " + url);
+    handleServiceError(httpRequest, method, url);
   }
 }
 
@@ -1200,6 +1198,20 @@ function showSpacesForProvider(id) {
         html += "</option>";
       });
       $("#NewDuraCloudStore-space").html(html);
-    }
-  );
+    }, true, handleServiceError);
+}
+
+function handleServiceError(httpRequest, method, url) {
+  if (httpRequest.status == 0 || httpRequest.status == 503) {                                                  
+    showError("The CloudSync Service appears to be down.\n\nPress Ok to try reloading.", "Service Unavailable", doReload);
+  } else if (httpRequest.status == 200) {                                                         
+    showError("Your session has expired.\n\nPress Ok to log in again.", "Session Expired", doReload);
+  } else {
+    showError("Unexpected HTTP response code ("
+      + httpRequest.status + ") from request:\n\n<code>" + method + " " + url + "</code>", "Service Error");
+  }
+}
+
+function doReload() {
+  window.location.reload();
 }

@@ -18,6 +18,13 @@ var service = new CloudSyncClient(serviceUri);
 
 $(function() {
   $("#button-login").button();
+  $("#dialog-error").dialog({
+    autoOpen: false,
+    modal: true,
+    width: 'auto',
+    show: 'fade',
+    hide: 'fade'
+  });
   document.f.j_username.focus();
 
   $("#versionInfo").html("<a style=\"color: #666\" href=\"https://wiki.duraspace.org/display/CLOUDSYNC\">CloudSync v" + service.info.version + "</a>");
@@ -51,17 +58,28 @@ $(function() {
             }
           );
         } else if (username == "") {
-            alert("Username cannot be blank!");
+            showError("Username cannot be blank!");
         } else if (pass1 == "") {
-            alert("Password cannot be blank!");
+            showError("Password cannot be blank!");
         } else {
-            alert("Passwords do not match!");
+            showError("Passwords do not match!");
         }
       }
     });
     $("#dialog-initialize").dialog("open");
   }
 });
+
+function showError(message) {
+  $("#dialog-error").html("<span class=\"ui-icon ui-icon-error\" style=\"float:left; margin:0 7px 20px 0;\"/>" + message);
+  $("#dialog-error").dialog("option", "buttons", {
+    "Ok": function() {
+      $(this).dialog("close");
+    }
+  }).addClass("ui-state-error");
+  $("#dialog-error").dialog("open");
+}
+
 //--></script>
 </head>
 
@@ -117,5 +135,10 @@ $(function() {
   <p id="versionInfo">
     ..
   </p>
+
+<div class="ui-helper-hidden" id="dialog-error" title="Error">
+  ...
+</div>
+
 </body>
 </html>

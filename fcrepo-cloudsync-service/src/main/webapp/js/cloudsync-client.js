@@ -256,8 +256,8 @@ function CloudSyncClient(serviceUri) {
   }
 
   function defaultErrorCallback(httpRequest, method, url, textStatus, errorThrown) {
-    if (httpRequest.status == 0) {
-      alert("[Service Unreachable]");
+    if (httpRequest.status == 0 || httpRequest.status == 503) {
+      alert("[Service Unavailable]");
       window.location.reload();
     } else if (httpRequest.status == 200) {
       alert("Your session has expired.\n\nPlease login again.");

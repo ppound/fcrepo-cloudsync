@@ -445,6 +445,10 @@
   ...
 </div>
 
+<div class="ui-helper-hidden" id="dialog-error" title="Error">
+  ...
+</div>
+
 <div class="ui-helper-hidden" id="dialog-about" title="About CloudSync">
   <p>
     <strong>Version:</strong> <span id="version">..</span><br/>
