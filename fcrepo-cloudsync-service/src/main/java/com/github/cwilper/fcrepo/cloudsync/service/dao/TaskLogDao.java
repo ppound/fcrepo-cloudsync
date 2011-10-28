@@ -67,7 +67,7 @@ public class TaskLogDao extends AbstractDao {
     }
 
     public List<TaskLog> listTaskLogs() {
-        return db.query("SELECT * FROM TaskLogs",
+        return db.query("SELECT * FROM TaskLogs ORDER BY finishDate DESC NULLS FIRST",
                 new RowMapper<TaskLog>() {
                     public TaskLog mapRow(ResultSet rs, int i) throws SQLException {
                         return getTaskLog(rs);

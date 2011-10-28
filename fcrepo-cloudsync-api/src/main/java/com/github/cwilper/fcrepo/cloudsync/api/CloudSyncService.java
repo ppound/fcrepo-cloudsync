@@ -71,6 +71,7 @@ public interface CloudSyncService {
     //                              Task Logs
     // -----------------------------------------------------------------------
 
+    // sorted by finishDate in descending order, nulls first
     List<TaskLog> listTaskLogs();
 
     TaskLog getTaskLog(String id) throws ResourceNotFoundException;
