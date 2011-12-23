@@ -115,7 +115,9 @@ public class DuraCloudConnector extends StoreConnector {
     @Override
     public boolean putObject(FedoraObject o,
                              StoreConnector source,
-                             boolean overwrite) {
+                             boolean overwrite,
+                             boolean copyExternal,
+                             boolean copyRedirect) {
         boolean existed = hasObject(o.pid());
         if (existed) {
             if (!overwrite) {
@@ -126,6 +128,14 @@ public class DuraCloudConnector extends StoreConnector {
         File tempFile = null;
         OutputStream out = null;
         try {
+            // convert E/R datastreams to managed, if needed
+            for (Datastream ds: o.datastreams().values()) {
+                ControlGroup c = ds.controlGroup();
+                if ((c.equals(ControlGroup.EXTERNAL) && copyExternal)
+                        || (c.equals(ControlGroup.REDIRECT) && copyRedirect)) {
+                    ds.controlGroup(ControlGroup.MANAGED);
+                }
+            }
             // write foxml to temp file
             tempFile = File.createTempFile("cloudsync", null);
             out = new FileOutputStream(tempFile);

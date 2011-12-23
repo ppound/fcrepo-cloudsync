@@ -212,6 +212,8 @@ function getTaskRows(item) {
     html += "<tr><td><strong>Destination Store:</strong></td><td>" + esc(destStoreName) + "</td></tr>";
     html += "<tr><td><strong>Overwrite:</strong></td><td>" + yesOrNo(data.overwrite) + "</td></tr>";
     html += "<tr><td><strong>Include Objects with Managed Content:</strong></td><td>" + yesOrNo(data.includeManaged) + "</td></tr>";
+    html += "<tr><td><strong>Copy External Datastream Content (convert to Managed):</strong></td><td>" + yesOrNo(data.copyExternal) + "</td></tr>";
+    html += "<tr><td><strong>Copy Redirect Datastream Content (convert to Managed):</strong></td><td>" + yesOrNo(data.copyRedirect) + "</td></tr>";
 
   }
   return html;
@@ -1099,13 +1101,23 @@ $(function() {
         if ($("#NewCopyTask-includeManaged").is(":checked")) {
           includeManaged = "true";
         }
+        var copyExternal = "false";
+        if ($("#NewCopyTask-copyExternal").is(":checked")) {
+          copyExternal = "true";
+        }
+        var copyRedirect = "false";
+        if ($("#NewCopyTask-copyRedirect").is(":checked")) {
+          copyRedirect = "true";
+        }
         var typeSpecificData = {
           "setUri"         : $("#NewCopyTask-setUri").val(),
           "queryStoreUri"  : $("#NewCopyTask-queryStoreUri").val(),
           "sourceStoreUri" : $("#NewCopyTask-sourceStoreUri").val(),
           "destStoreUri"   : $("#NewCopyTask-destStoreUri").val(),
           "overwrite"      : overwrite,
-          "includeManaged" : includeManaged
+          "includeManaged" : includeManaged,
+          "copyExternal"   : copyExternal,
+          "copyRedirect"   : copyRedirect
         };
         var state = "Idle";
         if ($("#NewCopyTask-runNow").is(":checked")) {

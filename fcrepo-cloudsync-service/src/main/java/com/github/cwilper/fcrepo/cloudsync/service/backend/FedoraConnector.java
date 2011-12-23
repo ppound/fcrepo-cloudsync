@@ -97,7 +97,9 @@ public class FedoraConnector extends StoreConnector {
     @Override
     public boolean putObject(FedoraObject o, 
                              StoreConnector source,
-                             boolean overwrite) {
+                             boolean overwrite,
+                             boolean copyExternal,
+                             boolean copyRedirect) {
         boolean existed = hasObject(o.pid());
         if (existed) {
             if (overwrite) {
@@ -112,6 +114,8 @@ public class FedoraConnector extends StoreConnector {
         try {
             // stage any managed datastream content, changing refs as needed
             stageManagedContent(o, source);
+            // stage and convert E/R datastreams to managed, if needed
+            stageAndConvertERDatastreams(o, source, copyExternal, copyRedirect);
             // write foxml to temp file
             tempFile = File.createTempFile("cloudsync", null);
             out = new FileOutputStream(tempFile);
@@ -128,6 +132,19 @@ public class FedoraConnector extends StoreConnector {
                 tempFile.delete();
             }
             writer.close();
+        }
+    }
+    
+    private void stageAndConvertERDatastreams(FedoraObject o,
+            StoreConnector source, boolean copyExternal, boolean copyRedirect)
+            throws IOException {
+        for (Datastream ds: o.datastreams().values()) {
+            ControlGroup g = ds.controlGroup();
+            if ((g.equals(ControlGroup.EXTERNAL) && copyExternal)
+                    || (g.equals(ControlGroup.REDIRECT) && copyRedirect)) {
+                stageVersions(o, ds, source);
+                ds.controlGroup(ControlGroup.MANAGED);
+            }
         }
     }
     

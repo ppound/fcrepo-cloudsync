@@ -190,7 +190,9 @@ public abstract class StoreConnector {
     // true if the object previously existed
     public abstract boolean putObject(FedoraObject o,
                                       StoreConnector source,
-                                      boolean overwrite);
+                                      boolean overwrite,
+                                      boolean copyExternal,
+                                      boolean copyRedirect);
 
     public abstract InputStream getContent(FedoraObject o,
                                            Datastream ds,

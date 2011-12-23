@@ -27,6 +27,8 @@ public class CopyTaskRunner extends TaskRunner implements ObjectListHandler {
     private final String destStoreId;
     private final boolean overwrite;
     private final boolean includeManaged;
+    private final boolean copyExternal;
+    private final boolean copyRedirect;
 
     private final Set<String> relatedSetIds = new HashSet<String>();
     private final Set<String> relatedStoreIds = new HashSet<String>();
@@ -59,6 +61,12 @@ public class CopyTaskRunner extends TaskRunner implements ObjectListHandler {
         includeManaged = StringUtil.validate("includeManaged",
                 map.get("includeManaged"),
                 new String[] { "true", "false" }).equals("true");
+        copyExternal = StringUtil.validate("copyExternal",
+                map.get("copyExternal"),
+                new String[] { "true", "false" }).equals("true");
+        copyRedirect = StringUtil.validate("copyRedirect",
+                map.get("copyRedirect"),
+                new String[] { "true", "false" }).equals("true");  
         relatedSetIds.add(setId);
         relatedStoreIds.add(queryStoreId);
         relatedStoreIds.add(sourceStoreId);
@@ -121,7 +129,7 @@ public class CopyTaskRunner extends TaskRunner implements ObjectListHandler {
                 logWriter.println("SKIPPED (has managed datastream(s))");
             } else {
                 boolean existed = destConnector.putObject(o, sourceConnector,
-                        overwrite);
+                        overwrite, copyExternal, copyRedirect);
                 if (existed) {
                     if (overwrite) {
                         logWriter.println("REPLACED (exists in destination)");

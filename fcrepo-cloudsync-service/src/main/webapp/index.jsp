@@ -211,6 +211,18 @@
       </td>
     </tr>
     <tr>
+      <td>Copy External Datastream Content (convert to Managed)</td>
+      <td>
+        <input type="checkbox" id="NewCopyTask-copyExternal"/>
+      </td>
+    </tr>
+    <tr>
+      <td>Copy Redirect Datastream Content (convert to Managed)</td>
+      <td>
+        <input type="checkbox" id="NewCopyTask-copyRedirect"/>
+      </td>
+    </tr>
+    <tr>
       <td>Run Now</td>
       <td>
         <input type="checkbox" id="NewCopyTask-runNow" checked="checked"/>
