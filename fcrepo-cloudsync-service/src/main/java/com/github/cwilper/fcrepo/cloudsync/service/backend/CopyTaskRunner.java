@@ -119,15 +119,19 @@ public class CopyTaskRunner extends TaskRunner implements ObjectListHandler {
         if (o != null) {
             if (!includeManaged && countManagedDatastreams(o) > 0) {
                 logWriter.println("SKIPPED (has managed datastream(s))");
-            } else if (destConnector.putObject(o, sourceConnector, overwrite)) {
-                if (overwrite) {
-                    logWriter.println("REPLACED (exists in destination)");
-                } else {
-                    logWriter.println("SKIPPED (exists in destination)");
-                }
             } else {
-                logWriter.println("OK (new in destination)");
-            }
+                boolean existed = destConnector.putObject(o, sourceConnector,
+                        overwrite);
+                if (existed) {
+                    if (overwrite) {
+                        logWriter.println("REPLACED (exists in destination)");
+                    } else {
+                        logWriter.println("SKIPPED (exists in destination)");
+                    }
+                } else {
+                    logWriter.println("OK (new in destination)");
+                }
+            }                
         } else {
             logWriter.println("SKIPPED (does not exist in source)");
         }
