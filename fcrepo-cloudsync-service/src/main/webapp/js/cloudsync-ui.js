@@ -59,6 +59,7 @@ function refreshStores(callback) {
     objectStores = data.objectStores;
     doSection(objectStores, "stores-duracloud", getDuraCloudStoreHtml);
     doSection(objectStores, "stores-fedora", getFedoraStoreHtml);
+    doSection(objectStores, "stores-filesystem", getFilesystemStoreHtml);
     secondsSinceStoreRefresh = 0;
     if (typeof callback != 'undefined') callback();
   }, true, handleServiceError);
@@ -373,15 +374,29 @@ function getDuraCloudStoreHtml(item) {
 }
 
 function getFedoraStoreHtml(item) {
+    var html = "";
+    if (item.type == "fedora") {
+        var data = $.parseJSON(item.data);
+        html += "<div class='item-actions'>";
+        html += "  <button onClick='doForgetObjectStore(\"" + item.uri + "\", \"" + esc(item.name) + "\");'>Forget</button>";
+        html += "</div>";
+        html += "<div><table>";
+        html += "  <tr><td><strong>Base URL:</strong></td><td>" + esc(data.url) + "</td></tr>";
+        html += "  <tr><td><strong>Username:</strong></td><td>" + esc(data.username) + "</td></tr>";
+        html += "</table></div>";
+    }
+    return html;
+}
+
+function getFilesystemStoreHtml(item) {
   var html = "";
-  if (item.type == "fedora") {
+  if (item.type == "filesystem") {
     var data = $.parseJSON(item.data);
     html += "<div class='item-actions'>";
     html += "  <button onClick='doForgetObjectStore(\"" + item.uri + "\", \"" + esc(item.name) + "\");'>Forget</button>";
     html += "</div>";
     html += "<div><table>";
-    html += "  <tr><td><strong>Base URL:</strong></td><td>" + esc(data.url) + "</td></tr>";
-    html += "  <tr><td><strong>Username:</strong></td><td>" + esc(data.username) + "</td></tr>";
+    html += "  <tr><td><strong>Path:</strong></td><td>" + esc(data.path) + "</td></tr>";
     html += "</table></div>";
   }
   return html;
@@ -892,14 +907,60 @@ $(function() {
         $("#NewFedoraStoreStep2-url").html($("#NewFedoraStore-url").val());
         $("#NewFedoraStoreStep2-username").html($("#NewFedoraStore-username").val());
         $("#NewFedoraStoreStep2-name").val(
-          "Fedora Repository at " +
-          $("#NewFedoraStore-url").val().split("/")[2]);
+            "Fedora Repository at " +
+            $("#NewFedoraStore-url").val().split("/")[2]);
         $("#dialog-NewFedoraStoreStep2").dialog("open");
       }
     }
   });
 
-  $("#dialog-NewFedoraStoreStep2").dialog({
+    $("#dialog-NewFedoraStoreStep2").dialog({
+      autoOpen: false,
+      modal: true,
+      width: 'auto',
+      show: 'fade',
+      hide: 'fade',
+      buttons: {
+        Save: function() {
+          var typeSpecificData = {
+            "url": $("#NewFedoraStore-url").val(),
+            "username": $("#NewFedoraStore-username").val(),
+            "password": $("#NewFedoraStore-password").val()
+          };
+          var data = { objectStore: {
+            "name": $("#NewFedoraStoreStep2-name").val(),
+            "type": "fedora",
+            "data": JSON.stringify(typeSpecificData)
+          }};
+          service.createObjectStore(data,
+              function() {
+                $("#dialog-NewFedoraStoreStep2").dialog("close");
+                refreshStores();
+              },
+              true,
+              handleNameCollision);
+        }
+      }
+    });
+
+  $("#dialog-NewFilesystemStore").dialog({
+    autoOpen: false,
+    modal: true,
+    width: 'auto',
+    show: 'fade',
+    hide: 'fade',
+    buttons: {
+      Next: function() {
+        $(this).dialog("close");
+        $("#NewFilesystemStoreStep2-path").html($("#NewFilesystemStore-path").val());
+        $("#NewFilesystemStoreStep2-name").val(
+            "Local Directory " + $("#NewFilesystemStore-path").val());
+        $("#dialog-NewFilesystemStoreStep2").dialog("open");
+      }
+    }
+  });
+
+  $("#dialog-NewFilesystemStoreStep2").dialog({
     autoOpen: false,
     modal: true,
     width: 'auto',
@@ -908,18 +969,16 @@ $(function() {
     buttons: {
       Save: function() {
         var typeSpecificData = {
-          "url": $("#NewFedoraStore-url").val(),
-          "username": $("#NewFedoraStore-username").val(),
-          "password": $("#NewFedoraStore-password").val()
+          "path": $("#NewFilesystemStore-path").val()
         };
         var data = { objectStore: {
-          "name": $("#NewFedoraStoreStep2-name").val(),
-          "type": "fedora",
+          "name": $("#NewFilesystemStoreStep2-name").val(),
+          "type": "filesystem",
           "data": JSON.stringify(typeSpecificData)
         }};
         service.createObjectStore(data,
             function() {
-              $("#dialog-NewFedoraStoreStep2").dialog("close");
+              $("#dialog-NewFilesystemStoreStep2").dialog("close");
               refreshStores();
             },
             true,
@@ -941,6 +1000,13 @@ $(function() {
     function() {
       $("#dialog-NewStore").dialog("close");
       $("#dialog-NewFedoraStore").dialog("open");
+    }
+  );
+
+  $("#button-NewFilesystemStore").click(
+    function() {
+      $("#dialog-NewStore").dialog("close");
+      $("#dialog-NewFilesystemStore").dialog("open");
     }
   );
 

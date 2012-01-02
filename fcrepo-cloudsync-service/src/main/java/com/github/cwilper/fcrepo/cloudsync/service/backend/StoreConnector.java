@@ -28,11 +28,13 @@ public abstract class StoreConnector {
 
     private static final Logger logger = LoggerFactory.getLogger(StoreConnector.class);
 
-    public static final StoreConnector getInstance(ObjectStore store, HttpClientConfig httpClientConfig) {
+    public static StoreConnector getInstance(ObjectStore store, HttpClientConfig httpClientConfig) {
         if (store.getType().equals("fedora")) {
             return new FedoraConnector(store, httpClientConfig);
         } else if (store.getType().equals("duracloud")) {
             return new DuraCloudConnector(store, httpClientConfig);
+        } else if (store.getType().equals("filesystem")) {
+            return new FilesystemConnector(store);
         } else {
             throw new IllegalArgumentException("Unrecognized ObjectStore type: " + store.getType());
         }

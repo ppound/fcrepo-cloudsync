@@ -98,14 +98,20 @@
     </div>
     <div class="tab-body">
       <div class="tab-section">
-        <h2>DuraCloud</h2>
+        <h2>DuraCloud-based</h2>
         <div id="stores-duracloud" class="tab-section-body">
           ...
         </div>
       </div>
+        <div class="tab-section">
+            <h2>Fedora-based</h2>
+            <div id="stores-fedora" class="tab-section-body">
+                ...
+            </div>
+        </div>
       <div class="tab-section">
-        <h2>Fedora</h2>
-        <div id="stores-fedora" class="tab-section-body">
+        <h2>Directory-based</h2>
+        <div id="stores-filesystem" class="tab-section-body">
           ...
         </div>
       </div>
@@ -304,6 +310,9 @@
   <p>
     <button id="button-NewFedoraStore">Fedora-based</button>
   </p>
+  <p>
+    <button id="button-NewFilesystemStore">Directory-based</button>
+  </p>
 </div>
 
 <div class="ui-helper-hidden" id="dialog-NewDuraCloudStore" title="New DuraCloud-based Store">
@@ -409,6 +418,28 @@
     <tr>
       <td>Store Name</td>
       <td><input id="NewFedoraStoreStep2-name" type="text" size="40" value="..."/></td>
+    </tr>
+  </table>
+</div>
+
+<div class="ui-helper-hidden" id="dialog-NewFilesystemStore" title="New Directory-based Store">
+  <table>
+    <tr>
+      <td>Path</td>
+      <td><input id="NewFilesystemStore-path" type="text" value=""/></td>
+    </tr>
+  </table>
+</div>
+
+<div class="ui-helper-hidden" id="dialog-NewFilesystemStoreStep2" title="New Directory-based Store">
+  <table>
+    <tr>
+      <td>Path</td>
+      <td id="NewFilesystemStoreStep2-path">...</td>
+    </tr>
+    <tr>
+      <td>Store Name</td>
+      <td><input id="NewFilesystemStoreStep2-name" type="text" size="40" value="..."/></td>
     </tr>
   </table>
 </div>
