@@ -52,6 +52,8 @@ public interface CloudSyncService {
     List<ObjectSet> listObjectSets();
 
     ObjectSet getObjectSet(String id) throws ResourceNotFoundException;
+    
+    ObjectSet updateObjectSet(String id, ObjectSet objectSet) throws ResourceNotFoundException, NameConflictException;
 
     void deleteObjectSet(String id) throws ResourceInUseException;
 

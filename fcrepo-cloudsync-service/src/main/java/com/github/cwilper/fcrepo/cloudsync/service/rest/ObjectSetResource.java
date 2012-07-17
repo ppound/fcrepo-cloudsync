@@ -24,19 +24,17 @@ import com.github.cwilper.fcrepo.cloudsync.api.NameConflictException;
 import com.github.cwilper.fcrepo.cloudsync.api.ObjectSet;
 import com.github.cwilper.fcrepo.cloudsync.api.ResourceInUseException;
 import com.github.cwilper.fcrepo.cloudsync.api.ResourceNotFoundException;
+import com.github.cwilper.fcrepo.cloudsync.service.util.PATCH;
 
 @Path("objectSets")
 public class ObjectSetResource extends AbstractResource {
-    
+
     public static final String OBJECTSET_JSON =
             "application/vnd.fcrepo-cloudsync.objectset+json";
-
     public static final String OBJECTSET_XML =
             "application/vnd.fcrepo-cloudsync.objectset+xml";
-
     public static final String OBJECTSETS_JSON =
             "application/vnd.fcrepo-cloudsync.objectsets+json";
-
     public static final String OBJECTSETS_XML =
             "application/vnd.fcrepo-cloudsync.objectsets+xml";
 
@@ -53,12 +51,36 @@ public class ObjectSetResource extends AbstractResource {
         @Description(value = STATUS_201_CREATED, target = DocTarget.RESPONSE)
     })
     public Response createObjectSet(@Context UriInfo uriInfo,
-                                    @Context HttpServletRequest req,
-                                    ObjectSet objectSet) {
+            @Context HttpServletRequest req,
+            ObjectSet objectSet) {
         try {
             ObjectSet newObjectSet = service.createObjectSet(objectSet);
             setUri(uriInfo, req, newObjectSet);
             return Response.created(newObjectSet.getUri()).entity(newObjectSet).build();
+        } catch (NameConflictException e) {
+            throw new WebApplicationException(e, Response.Status.CONFLICT);
+        }
+    }
+
+    @PATCH
+    @Path("{id}")
+    @Consumes({OBJECTSET_JSON, OBJECTSET_XML})
+    @Produces({JSON, XML, OBJECTSET_JSON, OBJECTSET_XML})
+    @Descriptions({
+        @Description(value = "Updates an object set", target = DocTarget.METHOD),
+        @Description(value = STATUS_200_OK, target = DocTarget.RESPONSE)
+    })
+    public ObjectSet updateObjectSet(@Context UriInfo uriInfo,
+            @Context HttpServletRequest req,
+            @PathParam("id") String id,
+            ObjectSet objectSet) {
+        try {
+            ObjectSet updatedObjectSet = service.updateObjectSet(id, objectSet);
+            setUri(uriInfo, req, updatedObjectSet);
+            return updatedObjectSet;
+        } catch (ResourceNotFoundException e) {
+            throw new WebApplicationException(e, Response.Status.NOT_FOUND);
+
         } catch (NameConflictException e) {
             throw new WebApplicationException(e, Response.Status.CONFLICT);
         }
@@ -72,9 +94,9 @@ public class ObjectSetResource extends AbstractResource {
         @Description(value = STATUS_200_OK, target = DocTarget.RESPONSE)
     })
     public List<ObjectSet> listObjectSets(@Context UriInfo uriInfo,
-                                          @Context HttpServletRequest req) {
+            @Context HttpServletRequest req) {
         List<ObjectSet> objectSets = service.listObjectSets();
-        for (ObjectSet objectSet: objectSets) {
+        for (ObjectSet objectSet : objectSets) {
             setUri(uriInfo, req, objectSet);
         }
         return objectSets;
@@ -88,8 +110,8 @@ public class ObjectSetResource extends AbstractResource {
         @Description(value = STATUS_200_OK, target = DocTarget.RESPONSE)
     })
     public ObjectSet getObjectSet(@Context UriInfo uriInfo,
-                                  @Context HttpServletRequest req,
-                                  @PathParam("id") String id) {
+            @Context HttpServletRequest req,
+            @PathParam("id") String id) {
         try {
             ObjectSet objectSet = service.getObjectSet(id);
             setUri(uriInfo, req, objectSet);
